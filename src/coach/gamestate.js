@@ -33,7 +33,7 @@ class GameState {
       // It might NOT have scores directly.
       // We should use 'allPlayers' to find the player by summonerName to get scores.
 
-      const playerName = newP.summonerName;
+      const playerName = newP.summonerName || newP.riotId || newP.riotIdGameName;
       const oldStats = this.getPlayerStats(this.previousData.allPlayers, playerName);
       const newStats = this.getPlayerStats(newData.allPlayers, playerName);
 
@@ -53,6 +53,13 @@ class GameState {
             events.push({ type: 'KILL', kda: newStats.scores });
           }
         }
+      } else {
+        // Debug: help identify matching issue
+        if (!this._warnedNoStats) {
+          console.log(`[GameState] ⚠️ Could not find player "${playerName}" in allPlayers. Available:`,
+            newData.allPlayers?.map(p => p.summonerName || p.riotId).join(', '));
+          this._warnedNoStats = true;
+        }
       }
     }
 
@@ -61,9 +68,11 @@ class GameState {
     return events;
   }
 
-  getPlayerStats(allPlayers, summonerName) {
-    if (!allPlayers) return null;
-    return allPlayers.find(p => p.summonerName === summonerName);
+  getPlayerStats(allPlayers, name) {
+    if (!allPlayers || !name) return null;
+    return allPlayers.find(p =>
+      p.summonerName === name || p.riotId === name || p.riotIdGameName === name
+    );
   }
 
   processGlobalEvents(eventData, activePlayerName) {

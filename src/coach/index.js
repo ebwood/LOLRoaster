@@ -113,11 +113,11 @@ class Coach {
 
   async tick() {
     try {
-      // 1. Fetch data from LOCAL lol client
-      // We need both /allgamedata (for players/stats) and /eventdata (for objectives)
+      // 1. Fetch data from LOCAL lol client (use config URL)
+      const baseUrl = config.lolApiUrl; // e.g. https://127.0.0.1:2999/liveclientdata
       const [allGameData, eventData] = await Promise.all([
-        this.client.get('https://127.0.0.1:2999/liveclientdata/allgamedata').catch(e => ({ data: null })),
-        this.client.get('https://127.0.0.1:2999/liveclientdata/eventdata').catch(e => ({ data: null }))
+        this.client.get(`${baseUrl}/allgamedata`).catch(e => ({ data: null })),
+        this.client.get(`${baseUrl}/eventdata`).catch(e => ({ data: null }))
       ]);
 
       const gameData = allGameData.data;
@@ -135,11 +135,20 @@ class Coach {
 
       // 4. Handle Events
       if (allEvents.length > 0) {
+        console.log(`[Coach] Detected ${allEvents.length} event(s):`, allEvents.map(e => e.type).join(', '));
+
         // Prepare context for LLM
+        const playerName = gameData.activePlayer.summonerName || gameData.activePlayer.riotId;
+        const playerStats = gameData.allPlayers.find(p =>
+          p.summonerName === playerName || p.riotId === playerName
+        );
+
         const currentContext = {
           gameTime: gameData.gameData.gameTime,
-          kda: `${gameData.activePlayer.scores.kills}/${gameData.activePlayer.scores.deaths}/${gameData.activePlayer.scores.assists}`,
-          cs: gameData.activePlayer.scores.creepScore
+          kda: playerStats
+            ? `${playerStats.scores.kills}/${playerStats.scores.deaths}/${playerStats.scores.assists}`
+            : '0/0/0',
+          cs: playerStats ? playerStats.scores.creepScore : 0
         };
 
         allEvents.forEach(event => {
@@ -153,14 +162,10 @@ class Coach {
             // 30% chance to roast teammate death to avoid spam
             if (Math.random() > 0.7) this.triggerRoast(TEAMMATE_DEATH_ROASTS, { ...currentContext, type: 'TEAMMATE_DEATH', details: `Teammate ${event.name} died` });
           } else if (event.type === 'OBJECTIVE') {
-            // Simple logic: if killer is on our team -> Good, else -> Bad
-            // We need to know our team. gameData.activePlayer.summonerName -> find in allPlayers -> team
-            const myName = gameData.activePlayer.summonerName;
-            const me = gameData.allPlayers.find(p => p.summonerName === myName);
-            const myTeam = me ? me.team : 'ORDER'; // Default to Order if fail
+            const myName = playerName;
+            const me = gameData.allPlayers.find(p => p.summonerName === myName || p.riotId === myName);
+            const myTeam = me ? me.team : 'ORDER';
 
-            // Check if killer is on my team
-            // KillerName in events is SummonerName.
             const killer = gameData.allPlayers.find(p => p.summonerName === event.killer);
 
             if (killer && killer.team === myTeam) {
@@ -172,7 +177,10 @@ class Coach {
         });
       }
     } catch (e) {
-      // console.error(e.message);
+      // Only log real errors, not connection errors (game not running)
+      if (e.code !== 'ECONNREFUSED' && e.code !== 'ECONNRESET') {
+        console.error('[Coach] tick error:', e.message);
+      }
     }
   }
 
