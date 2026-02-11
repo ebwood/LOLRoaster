@@ -1,9 +1,9 @@
 {
   "name": "lol-proxy",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "LoL Live Client Data API proxy - expose game data to LAN",
   "author": "ebwood",
-  "main": "index.js",
+  "main": "electron/main.js",
   "bin": "index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -14,6 +14,7 @@
     "electron:dev": "electron electron/main.js",
     "electron:build": "electron-builder --mac --win --linux",
     "electron:build:mac": "electron-builder --mac",
+    "electron:build:mac:arm64": "electron-builder --mac --arm64",
     "electron:build:win": "electron-builder --win",
     "electron:build:linux": "electron-builder --linux"
   },

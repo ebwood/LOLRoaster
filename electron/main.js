@@ -12,7 +12,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    show: true,
+    show: false,
     title: 'LoL Proxy - AI Coach',
     backgroundColor: '#0d1117',
     webPreferences: {
@@ -20,6 +20,26 @@ function createWindow() {
       contextIsolation: true
     }
   });
+
+  // Force window to foreground when content is ready
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.moveTop();
+    if (app.dock) app.dock.show();
+    app.focus({ steal: true });
+  });
+
+  // Also force show after a timeout in case ready-to-show doesn't fire
+  setTimeout(() => {
+    if (mainWindow && !mainWindow.isVisible()) {
+      mainWindow.show();
+      mainWindow.focus();
+      mainWindow.moveTop();
+      if (app.dock) app.dock.show();
+      app.focus({ steal: true });
+    }
+  }, 5000);
 
   // Retry loading if server isn't ready yet
   const loadApp = () => {
