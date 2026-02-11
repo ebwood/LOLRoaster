@@ -55,7 +55,9 @@ jobs:
         run: npm ci
 
       - name: Build CLI (macOS)
-        run: npx pkg . -t node18-macos-x64 --out-path dist --public
+        run: |
+          npx pkg . -t node18-macos-x64 --out-path dist --public
+          mv dist/lol-proxy dist/lol-proxy-macos
 
       - name: Import signing certificate
         env:
