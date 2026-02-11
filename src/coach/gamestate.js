@@ -57,8 +57,27 @@ class GameState {
         // Debug: help identify matching issue
         if (!this._warnedNoStats) {
           console.log(`[GameState] ⚠️ Could not find player "${playerName}" in allPlayers. Available:`,
-            newData.allPlayers?.map(p => p.summonerName || p.riotId).join(', '));
+            newData.allPlayers?.map(p => `${p.summonerName}|${p.riotId}`).join(', '));
           this._warnedNoStats = true;
+        }
+      }
+
+      // TEAMMATE DEATH detection — compare all players
+      if (newData.allPlayers && this.previousData.allPlayers) {
+        const myPlayer = this.getPlayerStats(newData.allPlayers, playerName);
+        const myTeam = myPlayer ? myPlayer.team : null;
+
+        if (myTeam) {
+          for (const newP2 of newData.allPlayers) {
+            // Skip self, skip enemies
+            if (newP2 === myPlayer || newP2.team !== myTeam) continue;
+
+            const pName = newP2.summonerName || newP2.riotId;
+            const oldP2 = this.getPlayerStats(this.previousData.allPlayers, pName);
+            if (oldP2 && newP2.scores.deaths > oldP2.scores.deaths) {
+              events.push({ type: 'TEAMMATE_DEATH', name: pName });
+            }
+          }
         }
       }
     }
@@ -70,9 +89,19 @@ class GameState {
 
   getPlayerStats(allPlayers, name) {
     if (!allPlayers || !name) return null;
-    return allPlayers.find(p =>
-      p.summonerName === name || p.riotId === name || p.riotIdGameName === name
+    // Try exact match on all name fields
+    const exact = allPlayers.find(p =>
+      p.summonerName === name || p.riotId === name ||
+      p.riotIdGameName === name || p.gameName === name
     );
+    if (exact) return exact;
+
+    // Fallback: case-insensitive / partial match
+    const lower = name.toLowerCase();
+    return allPlayers.find(p => {
+      const fields = [p.summonerName, p.riotId, p.riotIdGameName, p.gameName].filter(Boolean);
+      return fields.some(f => f.toLowerCase() === lower || f.toLowerCase().includes(lower) || lower.includes(f.toLowerCase()));
+    });
   }
 
   processGlobalEvents(eventData, activePlayerName) {
