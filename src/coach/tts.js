@@ -201,15 +201,23 @@ class TTS extends EventEmitter {
       this.history.unshift(entry);
       if (this.history.length > 20) this.history.pop(); // Keep last 20
 
-      // Emit event for WebSocket relay (browser handles playback)
-      this.emit('audioReady', { text, hash, url: `/audio/${hash}` });
+      // Play locally on the machine
+      this.currentProcess = player.play(filePath, (err) => {
+        this.currentProcess = null;
+        if (err && !err.killed) {
+          logger.error('Playback error:', err.message);
+        }
 
-      // Mark as done and process queue
-      this.isPlaying = false;
-      if (this.queue.length > 0) {
-        const nextText = this.queue.shift();
-        this.speak(nextText);
-      }
+        // Process queue after playback finishes
+        this.isPlaying = false;
+        if (this.queue.length > 0) {
+          const nextText = this.queue.shift();
+          this.speak(nextText);
+        }
+      });
+
+      // Also relay to browser UI
+      this.emit('audioReady', { text, hash, url: `/audio/${hash}` });
 
     } catch (e) {
       logger.error('TTS Generation Error:', e.message || e);
