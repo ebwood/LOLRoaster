@@ -99,6 +99,14 @@ class Coach {
     }
   }
 
+  triggerDebugRoast(type) {
+    let list = DEATH_ROASTS;
+    if (type === 'KILL') list = KILL_PRAISE;
+    if (type === 'CS_GAP') list = CS_ROASTS;
+
+    this.triggerRoast(list);
+  }
+
   triggerRoast(roastList = DEATH_ROASTS) {
     const roast = roastList[Math.floor(Math.random() * roastList.length)];
     console.log(`[Coach] Triggered Roast: ${roast}`);

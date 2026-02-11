@@ -41,10 +41,12 @@ async function main() {
 
   // Debug Endpoint for AI Coach (Only in Dev Mode)
   if (!process.pkg) {
+    app.use(require('express').json()); // Ensure JSON body parsing
     app.post('/debug/roast', (req, res) => {
       try {
-        coach.triggerRoast();
-        res.json({ status: 'ok', message: 'Roast triggered' });
+        const type = req.body.type || 'DEATH';
+        coach.triggerDebugRoast(type);
+        res.json({ status: 'ok', message: `Roast triggered: ${type}` });
       } catch (e) {
         res.status(500).json({ status: 'error', message: e.message });
       }

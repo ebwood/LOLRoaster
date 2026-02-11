@@ -361,8 +361,10 @@
 
       <div id="debug-section" class="section" style="margin-top: 40px; width: 100%; max-width: 600px; display: none;">
         <div class="section-header">🧪 Debug</div>
-        <div style="padding: 20px; text-align: center;">
-          <button class="debug-btn" onclick="triggerDebugRoast()">💀 模拟死亡 (触发嘲讽)</button>
+        <div style="padding: 20px; text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+          <button class="debug-btn" onclick="triggerDebugRoast('DEATH')">💀 模拟死亡</button>
+          <button class="debug-btn" style="background: #2ecc71;" onclick="triggerDebugRoast('KILL')">⚔️ 模拟击杀</button>
+          <button class="debug-btn" style="background: #f1c40f; color: #000;" onclick="triggerDebugRoast('CS_GAP')">💰 模拟漏刀</button>
         </div>
       </div>
 
@@ -858,8 +860,12 @@
       `;
     }
 
-    function triggerDebugRoast() {
-      fetch('/debug/roast', { method: 'POST' })
+    function triggerDebugRoast(type = 'DEATH') {
+      fetch('/debug/roast', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }) 
+      })
         .then(res => res.json())
         .then(data => console.log('Debug Roast:', data))
         .catch(err => console.error('Debug Roast Error:', err));
