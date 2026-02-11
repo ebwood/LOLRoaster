@@ -3,6 +3,7 @@ const config = require('./config.js');
 const { GameDetector } = require('./detector.js');
 const { createProxyServer } = require('./proxy.js');
 const { createWebSocketService } = require('./websocket.js');
+const coach = require('./coach/index.js');
 const os = require('os');
 
 // Disable TLS certificate validation for LoL's self-signed cert
@@ -38,6 +39,16 @@ async function main() {
   // 3. Create HTTP server
   const server = http.createServer(app);
 
+  // Debug Endpoint for AI Coach
+  app.post('/debug/roast', (req, res) => {
+    try {
+      coach.triggerRoast();
+      res.json({ status: 'ok', message: 'Roast triggered' });
+    } catch (e) {
+      res.status(500).json({ status: 'error', message: e.message });
+    }
+  });
+
   // 4. Attach WebSocket service
   createWebSocketService(server, detector);
 
@@ -64,16 +75,25 @@ async function main() {
   // 6. Start game detection
   detector.start();
 
+  // 7. Start Toxic AI Coach
+  try {
+    coach.start();
+  } catch (e) {
+    console.error('Failed to start AI Coach:', e);
+  }
+
   // Graceful shutdown
   process.on('SIGINT', () => {
     console.log('\n🛑 正在关闭代理服务...');
     detector.stop();
+    coach.stop();
     server.close();
     process.exit(0);
   });
 
   process.on('SIGTERM', () => {
     detector.stop();
+    coach.stop();
     server.close();
     process.exit(0);
   });

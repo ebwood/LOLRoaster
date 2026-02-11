@@ -314,6 +314,23 @@
     .lang-switch:hover {
       background: rgba(255, 255, 255, 0.2);
     }
+    .debug-btn {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    .debug-btn:hover {
+      background: #dc2626;
+      transform: scale(1.05);
+    }
+    .debug-btn:active {
+      transform: scale(0.95);
+    }
   </style>
 </head>
 <body>
@@ -341,6 +358,13 @@
       <div class="waiting-icon">🎮</div>
       <div class="waiting-text" data-i18n="waiting.title">等待 LoL 游戏启动...</div>
       <div class="waiting-sub" data-i18n="waiting.desc">当游戏开始后，数据将自动显示在这里</div>
+
+      <div class="section" style="margin-top: 40px; width: 100%; max-width: 600px;">
+        <div class="section-header">🧪 Debug</div>
+        <div style="padding: 20px; text-align: center;">
+          <button class="debug-btn" onclick="triggerDebugRoast()">💀 模拟死亡 (触发嘲讽)</button>
+        </div>
+      </div>
 
       <div class="section" style="margin-top: 40px; width: 100%; max-width: 600px;">
         <div class="section-header" data-i18n="api.title">📋 API 端点</div>
@@ -834,7 +858,14 @@
       `;
     }
 
-    // Initialize Language
+    function triggerDebugRoast() {
+      fetch('/debug/roast', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => console.log('Debug Roast:', data))
+        .catch(err => console.error('Debug Roast Error:', err));
+    }
+
+    // Connect on page load
     setLanguage(currentLang);
     connectWebSocket();
   </script>
