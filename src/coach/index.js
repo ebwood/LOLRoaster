@@ -16,6 +16,24 @@ const DEATH_ROASTS = [
   "对面那个英雄是你亲戚吗？这么照顾他生意。",
 ];
 
+const KILL_PRAISE = [
+  "这就杀人了？对面是人机吧？",
+  "哟，瞎猫碰上死耗子了？",
+  "居然杀了一个，看来对面键盘坏了。",
+  "如果不是运气好，刚才死的就是你了。",
+  "别骄傲，这只是开始，你这把至少还要死十次。",
+  "终于开张了，我都睡着了。",
+];
+
+const CS_ROASTS = [
+  "你的平A是用来治愈小兵的吗？",
+  "你也太善良了，看着小兵一个个老死都不忍心补。",
+  "我看你补刀像在做慈善，全送给塔了。",
+  "这把玩的是绝食流打法吗？",
+  "漏那两个炮车，心不痛吗？",
+  "这种补刀水平，还是去打野吧... 哦打野你也会被野怪打死。",
+];
+
 class Coach {
   constructor() {
     this.gameState = new GameState();
@@ -34,6 +52,10 @@ class Coach {
     if (this.isRunning) return;
     this.isRunning = true;
     console.log('AI Coach Started: Toxic Mode ON');
+
+    // Preload TTS cache
+    const allLines = [...DEATH_ROASTS, ...KILL_PRAISE, ...CS_ROASTS];
+    tts.preload(allLines);
 
     // Poll every 1s
     this.intervalId = setInterval(async () => {
@@ -63,7 +85,11 @@ class Coach {
       if (events.length > 0) {
         events.forEach(event => {
           if (event.type === 'DEATH') {
-            this.triggerRoast();
+            this.triggerRoast(DEATH_ROASTS);
+          } else if (event.type === 'KILL') {
+            this.triggerRoast(KILL_PRAISE);
+          } else if (event.type === 'CS_GAP') {
+            this.triggerRoast(CS_ROASTS);
           }
         });
       }
@@ -73,8 +99,8 @@ class Coach {
     }
   }
 
-  triggerRoast() {
-    const roast = DEATH_ROASTS[Math.floor(Math.random() * DEATH_ROASTS.length)];
+  triggerRoast(roastList = DEATH_ROASTS) {
+    const roast = roastList[Math.floor(Math.random() * roastList.length)];
     console.log(`[Coach] Triggered Roast: ${roast}`);
     tts.speak(roast);
   }
