@@ -29,6 +29,8 @@ jobs:
         run: |
           npx pkg . -t node18-linux-x64 --out-path dist --public
           npx pkg . -t node18-win-x64 --out-path dist --public
+          mv dist/lol-proxy dist/lol-proxy-linux
+          mv dist/lol-proxy.exe dist/lol-proxy-windows.exe
 
       - name: Upload CLI artifacts
         uses: actions/upload-artifact@v4
