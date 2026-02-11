@@ -1,16 +1,13 @@
-import express from 'express';
-import { config } from './config.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const express = require('express');
+const config = require('./config.js');
+const path = require('path');
 
 /**
  * Creates the Express proxy server that forwards requests to LoL's Live Client Data API.
  * 
  * @param {import('./detector.js').GameDetector} detector
  */
-export function createProxyServer(detector) {
+function createProxyServer(detector) {
   const app = express();
 
   // CORS - allow access from any origin (for LAN access)
@@ -25,6 +22,8 @@ export function createProxyServer(detector) {
   });
 
   // Serve static files (dashboard)
+  // In pkg, __dirname points to the virtual filesystem inside the executable
+  // We need to point to where we configured assets in package.json
   app.use(express.static(path.join(__dirname, '..', 'public')));
 
   // Health / status endpoint
@@ -50,7 +49,20 @@ export function createProxyServer(detector) {
     }
 
     try {
-      const targetUrl = `${config.lolBaseUrl}${req.originalUrl}`;
+      // Remove /liveclientdata prefix if it's already in the base URL, or just proxy the path
+      // Our config.lolApiUrl is '.../liveclientdata'
+      // req.originalUrl is '/liveclientdata/allgamedata'
+      // We want: '.../liveclientdata/allgamedata'
+      // But wait, the original code did `${config.lolBaseUrl}${req.originalUrl}` where base was root.
+      // Now config.lolApiUrl includes /liveclientdata.
+      // Actually let's use the URL constructor to be safe or just string replacement if simplistic.
+      // Retaining logic: config.lolApiUrl is .../liveclientdata.
+      // request path is /liveclientdata/xxx. 
+      // We should strip /liveclientdata from request path if we append to config.lolApiUrl
+
+      const endpoint = req.originalUrl.replace(/^\/liveclientdata/, '');
+      const targetUrl = `${config.lolApiUrl}${endpoint}`;
+
       const response = await fetch(targetUrl, {
         signal: AbortSignal.timeout(3000),
       });
@@ -71,23 +83,7 @@ export function createProxyServer(detector) {
     }
   });
 
-  // Convenience: proxy /swagger/v3/openapi.json and /swagger/v2/swagger.json
-  app.get('/swagger/*', async (req, res) => {
-    if (!detector.isGameRunning) {
-      return res.status(503).json({ error: 'Game not running' });
-    }
-
-    try {
-      const targetUrl = `${config.lolBaseUrl}${req.originalUrl}`;
-      const response = await fetch(targetUrl, {
-        signal: AbortSignal.timeout(3000),
-      });
-      const data = await response.json();
-      res.json(data);
-    } catch (err) {
-      res.status(502).json({ error: err.message });
-    }
-  });
-
   return app;
 }
+
+module.exports = { createProxyServer };

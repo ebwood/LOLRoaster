@@ -1,12 +1,12 @@
 /**
  * Configuration for the LoL Live Client Data Proxy
  */
-export const config = {
+const config = {
   // Proxy server port
-  port: parseInt(process.env.PORT || '8099'),
+  port: process.env.PORT || 8099,
 
   // LoL Live Client Data API base URL
-  lolBaseUrl: 'https://127.0.0.1:2999',
+  lolApiUrl: 'https://127.0.0.1:2999/liveclientdata',
 
   // Polling interval for game detection (ms)
   detectInterval: 3000,
@@ -15,5 +15,7 @@ export const config = {
   wsPushInterval: 1000,
 
   // Bind address (0.0.0.0 for LAN access)
-  host: '0.0.0.0',
+  host: '0.0.0.0'
 };
+
+module.exports = config;

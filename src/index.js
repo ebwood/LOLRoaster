@@ -1,9 +1,9 @@
-import http from 'http';
-import { config } from './config.js';
-import { GameDetector } from './detector.js';
-import { createProxyServer } from './proxy.js';
-import { createWebSocketService } from './websocket.js';
-import os from 'os';
+const http = require('http');
+const config = require('./config.js');
+const { GameDetector } = require('./detector.js');
+const { createProxyServer } = require('./proxy.js');
+const { createWebSocketService } = require('./websocket.js');
+const os = require('os');
 
 // Disable TLS certificate validation for LoL's self-signed cert
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';

@@ -1,5 +1,5 @@
-import { WebSocketServer } from 'ws';
-import { config } from './config.js';
+const { WebSocketServer } = require('ws');
+const config = require('./config.js');
 
 /**
  * WebSocket service that pushes real-time game data to connected clients.
@@ -7,7 +7,7 @@ import { config } from './config.js';
  * @param {import('http').Server} server
  * @param {import('./detector.js').GameDetector} detector
  */
-export function createWebSocketService(server, detector) {
+function createWebSocketService(server, detector) {
   const wss = new WebSocketServer({ server, path: '/ws' });
   let pushTimer = null;
 
@@ -53,7 +53,7 @@ export function createWebSocketService(server, detector) {
       if (!detector.isGameRunning) return;
 
       try {
-        const response = await fetch(`${config.lolBaseUrl}/liveclientdata/allgamedata`, {
+        const response = await fetch(`${config.lolApiUrl}/allgamedata`, {
           signal: AbortSignal.timeout(2000),
         });
 
@@ -68,7 +68,7 @@ export function createWebSocketService(server, detector) {
       } catch {
         // Ignore fetch errors during push
       }
-    }, config.wsPushInterval);
+    }, config.detectInterval); // Re-using detectInterval or a specific push interval if defined
   }
 
   function stopPushing() {
@@ -92,3 +92,5 @@ function broadcast(wss, data) {
     }
   }
 }
+
+module.exports = { createWebSocketService };

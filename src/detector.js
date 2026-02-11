@@ -1,11 +1,11 @@
-import { EventEmitter } from 'events';
-import { config } from './config.js';
+const EventEmitter = require('events');
+const config = require('./config.js');
 
 /**
  * Detects whether a LoL game is currently running by polling the Live Client Data API.
  * More reliable than process name detection since the API is only available during a game.
  */
-export class GameDetector extends EventEmitter {
+class GameDetector extends EventEmitter {
   constructor() {
     super();
     this.isGameRunning = false;
@@ -37,7 +37,7 @@ export class GameDetector extends EventEmitter {
    */
   async _poll() {
     try {
-      const response = await fetch(`${config.lolBaseUrl}/liveclientdata/allgamedata`, {
+      const response = await fetch(`${config.lolApiUrl}/allgamedata`, {
         signal: AbortSignal.timeout(2000),
       });
 
@@ -69,3 +69,5 @@ export class GameDetector extends EventEmitter {
     }
   }
 }
+
+module.exports = { GameDetector };

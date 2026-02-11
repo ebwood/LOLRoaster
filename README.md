@@ -24,6 +24,39 @@ npm run dev
 
 启动后会显示局域网访问地址，在另一台电脑浏览器输入该地址即可访问。
 
+## 打包成可执行文件 (给玩家使用)
+
+如果你想把这个程序发给朋友使用（无需安装 Node.js），可以运行以下命令生成 `.exe` (Windows) 或可执行文件 (Mac)：
+
+```bash
+# 生成 Windows 和 Mac 版本
+npm run build
+
+# 仅生成 Windows 版本
+npm run build:win
+
+# 仅生成 Mac 版本
+npm run build:mac
+```
+
+生成的文件位于 `dist/` 目录下。
+
+## 🚀 自动发布流程 (GitHub Actions)
+
+本项目配置了自动化发布流程。当你需要发布新版本时：
+
+1.  **打标签**:
+    ```bash
+    git tag v1.0.0
+    ```
+2.  **推送标签**:
+    ```bash
+    git push origin v1.0.0
+    ```
+
+推送后，GitHub Actions 会自动构建项目，并在 GitHub 仓库的 **Releases** 页面发布新版本，包含 Windows (`.exe`) 和 Mac 可执行文件供下载。
+
+
 ## API 端点
 
 | 端点 | 说明 |
