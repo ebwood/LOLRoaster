@@ -65,6 +65,43 @@ class GameState {
     if (!allPlayers) return null;
     return allPlayers.find(p => p.summonerName === summonerName);
   }
+
+  processGlobalEvents(eventData, activePlayerName) {
+    const events = [];
+    if (!eventData || !eventData.Events) return events;
+
+    if (!this.processedEvents) {
+      this.processedEvents = new Set();
+    }
+
+    eventData.Events.forEach(e => {
+      // Use EventID to dedupe. If EventID is 0 or missing, use a combo key
+      const uniqueKey = e.EventID || `${e.EventName}_${e.EventTime}`;
+
+      if (this.processedEvents.has(uniqueKey)) return;
+      this.processedEvents.add(uniqueKey);
+
+      // Only care about recent events (last 5 seconds) to avoid spam on startup
+      // But for EventID based logic, we just track all seen IDs.
+
+      if (e.EventName === 'TurretKilled') {
+        // Example: "TurretKilled"
+        events.push({ type: 'OBJECTIVE', subtype: 'TURRET', killer: e.KillerName });
+      } else if (e.EventName === 'InhibKilled') {
+        events.push({ type: 'OBJECTIVE', subtype: 'INHIB', killer: e.KillerName });
+      } else if (e.EventName === 'DragonKill') {
+        events.push({ type: 'OBJECTIVE', subtype: 'DRAGON', killer: e.KillerName, dragonType: e.DragonType });
+      } else if (e.EventName === 'BaronKill') {
+        events.push({ type: 'OBJECTIVE', subtype: 'BARON', killer: e.KillerName });
+      } else if (e.EventName === 'HeraldKill') {
+        events.push({ type: 'OBJECTIVE', subtype: 'HERALD', killer: e.KillerName });
+      } else if (e.EventName === 'ChampionKill') {
+        // We handle kills via diff logic usually, but this is good for multi-kills if we want
+      }
+    });
+
+    return events;
+  }
 }
 
 module.exports = GameState;
