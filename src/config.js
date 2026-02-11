@@ -2,7 +2,21 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
-const CONFIG_FILE = path.join(__dirname, '../config.json');
+function getConfigPath() {
+  const defaultPath = path.join(__dirname, '../config.json');
+  // In packaged Electron, __dirname is inside read-only app.asar
+  if (__dirname.includes('app.asar')) {
+    try {
+      const { app } = require('electron');
+      return path.join(app.getPath('userData'), 'config.json');
+    } catch {
+      return path.join(require('os').homedir(), '.lol-proxy', 'config.json');
+    }
+  }
+  return defaultPath;
+}
+
+const CONFIG_FILE = getConfigPath();
 
 /**
  * Load user config from config.json (if exists)

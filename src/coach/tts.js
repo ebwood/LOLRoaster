@@ -20,7 +20,7 @@ class TTS extends EventEmitter {
     this.voice = this.edgeVoices.zh;
     this.isPlaying = false;
     this.queue = [];
-    this.cacheDir = path.join(__dirname, '../../cache_tts');
+    this.cacheDir = this._getCacheDir();
     this.currentProcess = null; // Track current play-sound process
 
     // TTS Provider
@@ -36,6 +36,20 @@ class TTS extends EventEmitter {
     }
 
     logger.tts(`Provider: ${this.provider}${this.provider === 'elevenlabs' ? ` (Voice: ${this.elevenlabsVoiceId})` : ''}`);
+  }
+
+  _getCacheDir() {
+    // In packaged Electron, __dirname is inside read-only app.asar
+    if (process.pkg || (process.versions && process.versions.electron && __dirname.includes('app.asar'))) {
+      try {
+        const { app } = require('electron');
+        return path.join(app.getPath('userData'), 'cache_tts');
+      } catch {
+        // Fallback for non-electron packaged builds
+        return path.join(require('os').homedir(), '.lol-proxy', 'cache_tts');
+      }
+    }
+    return path.join(__dirname, '../../cache_tts');
   }
 
   setLanguage(lang) {
