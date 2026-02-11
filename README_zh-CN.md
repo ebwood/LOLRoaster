@@ -1,15 +1,19 @@
-# LoL Live Client Data Proxy
+# LoL 实时数据代理
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
-将 LoL 英雄联盟游戏运行时的 [Live Client Data API](https://developer.riotgames.com/docs/lol#game-client-api_live-client-data-api) 代理暴露到局域网，供其他设备访问。
+一个本地代理服务，将英雄联盟 [实时客户端数据 API](https://developer.riotgames.com/docs/lol#game-client-api_live-client-data-api) 暴露到局域网，并内置 **AI 毒舌教练**，在你送人头时实时嘲讽你。
 
-## 功能
+## ✨ 功能
 
-- 🔍 **自动检测** — 自动检测 LoL 游戏是否在运行
-- 🔄 **HTTP 代理** — 代理转发所有 `/liveclientdata/*` 端点
+- 🔍 **自动检测** — 自动检测 LoL 游戏客户端是否运行
+- 🔄 **HTTP 代理** — 将所有 `/liveclientdata/*` 端点代理到局域网
 - 📡 **WebSocket 推送** — 通过 WebSocket 实时推送游戏数据
-- 📊 **状态面板** — Web 页面查看游戏状态、玩家数据、事件
+- 📊 **数据面板** — Web 界面查看游戏状态、玩家数据和事件
+- 🤖 **AI 毒舌教练** — 基于 LLM 的动态嘲讽，主题随机切换 (Google Gemini 驱动)
+- 🗣️ **高级语音** — ElevenLabs V3 对话 API 支持 60+ 语气标签，或免费 Edge TTS
+- 🎵 **网页播放器** — 浏览器内播放音频，支持暂停/继续/重播/历史记录
+- 🌐 **双语支持** — 中英文界面和嘲讽
 
 ## 快速开始
 
@@ -17,93 +21,104 @@
 # 安装依赖
 npm install
 
-# 启动服务
-npm start
+# 复制并配置环境变量
+cp .env.example .env
+# 编辑 .env 填入你的 API 密钥
 
-# 开发模式 (自动重启)
+# 开发模式启动
 npm run dev
+
+# 生产模式启动
+npm start
 ```
 
-启动后会显示局域网访问地址，在另一台电脑浏览器输入该地址即可访问。
-
-## 打包成可执行文件 (给玩家使用)
-
-如果你想把这个程序发给朋友使用（无需安装 Node.js），可以运行以下命令生成 `.exe` (Windows) 或可执行文件 (Mac)：
-
-```bash
-# 生成 Windows 和 Mac 版本
-npm run build
-
-# 仅生成 Windows 版本
-npm run build:win
-
-# 仅生成 Mac 版本
-npm run build:mac
-```
-
-生成的文件位于 `dist/` 目录下。
-
-## 🚀 自动发布流程 (GitHub Actions)
-
-本项目配置了自动化发布流程。当你需要发布新版本时：
-
-1.  **打标签**:
-    ```bash
-    git tag v1.0.0
-    ```
-2.  **推送标签**:
-    ```bash
-    git push origin v1.0.0
-    ```
-
-推送后，GitHub Actions 会自动构建项目，并在 GitHub 仓库的 **Releases** 页面发布新版本，包含 Windows (`lol-proxy-win.exe`) 和 Mac (`lol-proxy-macos`) 可执行文件供下载。
-
-
-## API 端点
-
-| 端点 | 说明 |
-|------|------|
-| `GET /status` | 代理服务状态 |
-| `GET /liveclientdata/allgamedata` | 所有游戏数据 |
-| `GET /liveclientdata/activeplayer` | 当前玩家 |
-| `GET /liveclientdata/activeplayerabilities` | 当前玩家技能 |
-| `GET /liveclientdata/activeplayername` | 当前玩家名称 |
-| `GET /liveclientdata/activeplayerrunes` | 当前玩家符文 |
-| `GET /liveclientdata/eventdata` | 游戏事件 |
-| `GET /liveclientdata/gamestats` | 游戏统计 |
-| `GET /liveclientdata/playerlist` | 所有玩家列表 |
-| `GET /liveclientdata/playeritems?summonerName=xxx` | 玩家装备 |
-| `GET /liveclientdata/playerscores?summonerName=xxx` | 玩家分数 |
-| `GET /liveclientdata/playersummonerspells?summonerName=xxx` | 召唤师技能 |
-| `WS /ws` | WebSocket 实时推送 |
-
-## WebSocket 消息格式
-
-```json
-// 游戏状态
-{ "type": "status", "gameRunning": true }
-
-// 游戏开始
-{ "type": "gameStarted" }
-
-// 游戏数据 (每秒推送)
-{ "type": "gameData", "data": { ... }, "timestamp": 1234567890 }
-
-// 游戏结束
-{ "type": "gameEnded" }
-```
+打开 `http://localhost:8099` 查看面板。
 
 ## 配置
 
-通过环境变量配置:
+所有设置通过 `.env` 管理：
 
 ```bash
-PORT=8099 npm start   # 修改端口
+# LLM (Google Gemini)
+LLM_ENABLED=true
+LLM_API_KEY=你的_Gemini_API_Key
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+LLM_MODEL=gemini-2.0-flash
+
+# TTS 引擎: "edge" (免费) 或 "elevenlabs" (付费，支持语气标签)
+TTS_PROVIDER=elevenlabs
+ELEVENLABS_API_KEY=你的_ElevenLabs_API_Key
+ELEVENLABS_VOICE_ID=5mZxJZhSmJTjL7GoYfYI  # Karo Yang (中文)
 ```
 
-## 工作原理
+### ElevenLabs 语气标签
 
-1. 代理服务定期请求 `https://127.0.0.1:2999/liveclientdata/allgamedata` 检测游戏状态
-2. 检测到游戏运行后，将所有 API 请求代理转发到 LoL 本地服务
-3. 同时通过 WebSocket 每秒推送完整游戏数据
-4. 服务绑定 `0.0.0.0` 允许局域网其他设备通过 IP 访问
+使用 ElevenLabs V3 对话 API 时，AI 教练可以表达情感：
+
+```
+[laughs] [sighs] [sarcastic tone] [angry] [whispers] [shouts] ...
+```
+
+支持 60+ 标签，包括情感、语气、反应和语速控制。
+
+## 🤖 AI 毒舌教练
+
+教练会根据游戏事件触发嘲讽：
+
+| 事件 | 触发条件 |
+|------|---------|
+| 💀 死亡 | 玩家阵亡 |
+| ⚔️ 击杀 | 玩家击杀敌人 |
+| 💰 漏刀 | 补刀表现差 |
+| 🐷 队友阵亡 | 队友被击杀 |
+| 🐉 目标 | 击杀龙/男爵/先锋 |
+
+每次嘲讽使用随机主题（如"失望的父母"、"建议卸载"、"跟小兵比"）。
+
+## API 端点
+
+| 端点 | 描述 |
+|------|------|
+| `GET /status` | 服务状态 |
+| `GET /liveclientdata/allgamedata` | 所有游戏数据 |
+| `GET /liveclientdata/activeplayer` | 当前玩家数据 |
+| `GET /liveclientdata/playerlist` | 所有玩家列表 |
+| `GET /liveclientdata/eventdata` | 游戏事件 |
+| `GET /liveclientdata/gamestats` | 游戏统计 |
+| `GET /audio/:hash` | 获取缓存语音 |
+| `WS /ws` | WebSocket 实时推送 |
+
+## 打包为可执行文件
+
+```bash
+# 同时生成 Windows 和 Mac 版本
+npm run build
+
+# 仅 Windows
+npm run build:win
+
+# 仅 Mac
+npm run build:mac
+```
+
+输出文件在 `dist/` 目录。
+
+## 🚀 自动发布 (GitHub Actions)
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+推送 tag 后，GitHub Actions 会自动构建并发布到 Releases 页面。
+
+## 运行原理
+
+1. 轮询 `https://127.0.0.1:2999/liveclientdata/allgamedata` 检测游戏状态
+2. 将所有 API 请求代理到本地 LoL 客户端
+3. 通过 WebSocket 将游戏数据推送到浏览器
+4. AI 教练监听事件 → LLM 生成嘲讽 → TTS 转语音 → 流式推送到浏览器播放
+
+## License
+
+MIT

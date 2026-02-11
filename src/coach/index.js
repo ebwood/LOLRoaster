@@ -1,8 +1,14 @@
 const axios = require('axios');
 const https = require('https');
+const llm = require('./llm');
 const GameState = require('./gamestate');
 const tts = require('./tts');
-const config = require('../config'); // Use existing config
+const config = require('../config');
+
+// ... (existing constants)
+
+
+
 
 // 1. Toxic Lines (Death)
 const DEATH_ROASTS = [
@@ -70,6 +76,12 @@ class Coach {
         rejectUnauthorized: false
       })
     });
+    this.language = 'zh'; // Default language
+  }
+
+  setLanguage(lang) {
+    this.language = lang;
+    console.log(`[Coach] Language set to: ${lang}`);
   }
 
   start() {
@@ -123,16 +135,23 @@ class Coach {
 
       // 4. Handle Events
       if (allEvents.length > 0) {
+        // Prepare context for LLM
+        const currentContext = {
+          gameTime: gameData.gameData.gameTime,
+          kda: `${gameData.activePlayer.scores.kills}/${gameData.activePlayer.scores.deaths}/${gameData.activePlayer.scores.assists}`,
+          cs: gameData.activePlayer.scores.creepScore
+        };
+
         allEvents.forEach(event => {
           if (event.type === 'DEATH') {
-            this.triggerRoast(DEATH_ROASTS);
+            this.triggerRoast(DEATH_ROASTS, { ...currentContext, type: 'DEATH', details: `Killed by ${event.kda ? 'enemy' : 'unknown'}` });
           } else if (event.type === 'KILL') {
-            this.triggerRoast(KILL_PRAISE);
+            this.triggerRoast(KILL_PRAISE, { ...currentContext, type: 'KILL' });
           } else if (event.type === 'CS_GAP') {
-            this.triggerRoast(CS_ROASTS);
+            this.triggerRoast(CS_ROASTS, { ...currentContext, type: 'CS_GAP', details: `Missed too many minions. Gap: ${event.diff}` });
           } else if (event.type === 'TEAMMATE_DEATH') {
             // 30% chance to roast teammate death to avoid spam
-            if (Math.random() > 0.7) this.triggerRoast(TEAMMATE_DEATH_ROASTS);
+            if (Math.random() > 0.7) this.triggerRoast(TEAMMATE_DEATH_ROASTS, { ...currentContext, type: 'TEAMMATE_DEATH', details: `Teammate ${event.name} died` });
           } else if (event.type === 'OBJECTIVE') {
             // Simple logic: if killer is on our team -> Good, else -> Bad
             // We need to know our team. gameData.activePlayer.summonerName -> find in allPlayers -> team
@@ -145,9 +164,9 @@ class Coach {
             const killer = gameData.allPlayers.find(p => p.summonerName === event.killer);
 
             if (killer && killer.team === myTeam) {
-              this.triggerRoast(OBJECTIVE_GOOD);
+              this.triggerRoast(OBJECTIVE_GOOD, { ...currentContext, type: 'OBJECTIVE_TAKEN', details: `We took ${event.subtype}` });
             } else {
-              this.triggerRoast(OBJECTIVE_BAD);
+              this.triggerRoast(OBJECTIVE_BAD, { ...currentContext, type: 'OBJECTIVE_LOST', details: `Enemy took ${event.subtype}` });
             }
           }
         });
@@ -164,12 +183,50 @@ class Coach {
     if (type === 'TEAMMATE_DEATH') list = TEAMMATE_DEATH_ROASTS;
     if (type === 'OBJECTIVE') list = OBJECTIVE_GOOD; // Default to good for debug
 
-    this.triggerRoast(list);
+    if (type === 'LLM_TEST') {
+      const scenarios = [
+        { type: 'DEATH', gameTime: 15 * 60, kda: '0/5/0', cs: 20, details: 'Died to Teammate (Testing)' },
+        { type: 'DEATH', gameTime: 3 * 60, kda: '0/2/0', cs: 5, details: 'First blood given at level 1' },
+        { type: 'DEATH', gameTime: 25 * 60, kda: '1/8/2', cs: 85, details: 'Dove enemy tower and died' },
+        { type: 'DEATH', gameTime: 30 * 60, kda: '2/10/1', cs: 110, details: 'Got caught face-checking a bush alone' },
+        { type: 'DEATH', gameTime: 10 * 60, kda: '0/4/0', cs: 30, details: 'Killed by jungle camp (raptors)' },
+        { type: 'DEATH', gameTime: 20 * 60, kda: '3/7/0', cs: 60, details: 'Flashed into 5 enemies and died instantly' },
+        { type: 'DEATH', gameTime: 8 * 60, kda: '0/3/1', cs: 15, details: 'Ganked while overextended with no wards' },
+        { type: 'DEATH', gameTime: 35 * 60, kda: '0/12/0', cs: 50, details: 'Tried to 1v1 the fed enemy carry' },
+        { type: 'DEATH', gameTime: 5 * 60, kda: '0/1/0', cs: 8, details: 'Walked into enemy jungle and got collapsed on' },
+        { type: 'DEATH', gameTime: 40 * 60, kda: '4/9/3', cs: 150, details: 'Got caught splitting alone while team was fighting Baron' },
+      ];
+      const scenario = scenarios[Math.floor(Math.random() * scenarios.length)];
+      this.triggerRoast(DEATH_ROASTS, scenario);
+      return;
+    }
+
+    this.triggerRoast(list, { type: type, gameTime: 10, kda: '0/0/0', cs: 0, details: 'Debug Trigger' });
   }
 
-  triggerRoast(roastList = DEATH_ROASTS) {
+  async triggerRoast(roastList = DEATH_ROASTS, context = {}) {
+    // 1. Try LLM first (if enabled)
+    // We only use LLM for DEATH events for now to save cost/latency, or if explicitly passed
+    if (config.llm.enabled && (!context.type || context.type === 'DEATH')) {
+      const llmRoast = await llm.generateRoast({
+        event: context.type || 'DEATH',
+        kda: context.kda || '0/0/0',
+        cs: context.cs || 0,
+        gameTime: Math.floor(context.gameTime / 60) || 0,
+        details: context.details || 'Player died',
+        language: this.language
+      });
+
+      if (llmRoast) {
+        console.log(`[Coach] Triggered LLM Roast: ${llmRoast}`);
+        tts.speak(llmRoast);
+        return;
+      }
+    }
+
+    // 2. Fallback to Static Lines
     const roast = roastList[Math.floor(Math.random() * roastList.length)];
-    console.log(`[Coach] Triggered Roast: ${roast}`);
+    console.log(`[Coach] Triggered Static Roast: ${roast}`);
     tts.speak(roast);
   }
 }

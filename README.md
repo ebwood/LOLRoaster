@@ -2,14 +2,18 @@
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
-Expose the League of Legends [Live Client Data API](https://developer.riotgames.com/docs/lol#game-client-api_live-client-data-api) to your local network (LAN) for access by other devices.
+A local proxy that exposes the League of Legends [Live Client Data API](https://developer.riotgames.com/docs/lol#game-client-api_live-client-data-api) to your LAN, featuring an **AI Toxic Coach** that roasts you in real-time when you die.
 
-## Features
+## ✨ Features
 
-- 🔍 **Auto Detection** — Automatically detects if the LoL game client is running.
-- 🔄 **HTTP Proxy** — Proxies all `/liveclientdata/*` endpoints.
-- 📡 **WebSocket Push** — Pushes real-time game data via WebSocket.
-- 📊 **Status Dashboard** — Web interface to view game status, player data, and events.
+- 🔍 **Auto Detection** — Automatically detects the LoL game client
+- 🔄 **HTTP Proxy** — Proxies all `/liveclientdata/*` endpoints to LAN
+- 📡 **WebSocket Push** — Real-time game data via WebSocket
+- 📊 **Status Dashboard** — Web UI for game status, players, and events
+- 🤖 **AI Toxic Coach** — LLM-powered roasts with dynamic themes (powered by Google Gemini)
+- 🗣️ **Premium TTS** — ElevenLabs V3 Dialogue API with 60+ emotion audio tags, or free Edge TTS
+- 🎵 **Web Audio Player** — Browser-based player with progress bar, pause/resume, replay, and history
+- 🌐 **Multilingual** — Chinese & English UI and roast generation
 
 ## Quick Start
 
@@ -17,92 +21,104 @@ Expose the League of Legends [Live Client Data API](https://developer.riotgames.
 # Install dependencies
 npm install
 
-# Start the service
-npm start
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your API keys
 
-# Development mode (auto-restart)
+# Start (development)
 npm run dev
+
+# Start (production)
+npm start
 ```
 
-Once started, the LAN access address will be displayed. You can access it by entering this address in a browser on another device.
+Open `http://localhost:8099` in your browser to see the dashboard.
 
-## Package as Executable (For End Users)
+## Configuration
 
-If you want to distribute this program to friends (who may not have Node.js installed), you can run the following commands to generate standalone executables for Windows (`.exe`) or macOS:
+All settings are managed via `.env`:
 
 ```bash
-# Generate for both Windows and Mac
-npm run build
+# LLM (Google Gemini)
+LLM_ENABLED=true
+LLM_API_KEY=your_gemini_api_key
+LLM_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+LLM_MODEL=gemini-2.0-flash
 
-# Generate for Windows only
-npm run build:win
-
-# Generate for Mac only
-npm run build:mac
+# TTS Provider: "edge" (free) or "elevenlabs" (paid, with emotion tags)
+TTS_PROVIDER=elevenlabs
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+ELEVENLABS_VOICE_ID=5mZxJZhSmJTjL7GoYfYI  # Karo Yang (Chinese)
 ```
 
-The generated files can be found in the `dist/` directory.
+### ElevenLabs Emotion Tags
 
-## 🚀 Automated Release Workflow (GitHub Actions)
+When using ElevenLabs V3 Dialogue API, the AI coach can express emotions:
 
-This project is configured with an automated release workflow. To publish a new version:
+```
+[laughs] [sighs] [sarcastic tone] [angry] [whispers] [shouts] ...
+```
 
-1.  **Create a Tag**:
-    ```bash
-    git tag v1.0.0
-    ```
-2.  **Push the Tag**:
-    ```bash
-    git push origin v1.0.0
-    ```
+60+ tags are available including emotions, delivery styles, reactions, and pacing controls.
 
-After pushing, GitHub Actions will automatically build the project and publish a new version on the GitHub repository's **Releases** page, including executables for Windows (`lol-proxy-win.exe`) and Mac (`lol-proxy-macos`).
+## 🤖 AI Toxic Coach
+
+The coach triggers roasts based on in-game events:
+
+| Event | Trigger |
+|-------|---------|
+| 💀 Death | Player dies |
+| ⚔️ Kill | Player gets a kill |
+| 💰 CS Gap | Poor CS performance |
+| 🐷 Teammate Death | Teammate dies |
+| 🐉 Objective | Dragon/Baron/Herald taken |
+
+Each roast uses a random theme (e.g., "disappointed parent", "suggest uninstall", "compare to minions") for variety.
 
 ## API Endpoints
 
 | Endpoint | Description |
-|------|------|
-| `GET /status` | Proxy service status |
+|----------|-------------|
+| `GET /status` | Service status |
 | `GET /liveclientdata/allgamedata` | All game data |
-| `GET /liveclientdata/activeplayer` | Active player data |
-| `GET /liveclientdata/activeplayerabilities` | Active player abilities |
-| `GET /liveclientdata/activeplayername` | Active player name |
-| `GET /liveclientdata/activeplayerrunes` | Active player runes |
+| `GET /liveclientdata/activeplayer` | Active player |
+| `GET /liveclientdata/playerlist` | Player list |
 | `GET /liveclientdata/eventdata` | Game events |
 | `GET /liveclientdata/gamestats` | Game statistics |
-| `GET /liveclientdata/playerlist` | Player list |
-| `GET /liveclientdata/playeritems?summonerName=xxx` | Player items |
-| `GET /liveclientdata/playerscores?summonerName=xxx` | Player scores |
-| `GET /liveclientdata/playersummonerspells?summonerName=xxx` | Player summoner spells |
+| `GET /audio/:hash` | Serve cached TTS audio |
 | `WS /ws` | WebSocket real-time push |
 
-## WebSocket Message Format
-
-```json
-// Service Status
-{ "type": "status", "gameRunning": true }
-
-// Game Started
-{ "type": "gameStarted" }
-
-// Game Data (Pushed every second)
-{ "type": "gameData", "data": { ... }, "timestamp": 1234567890 }
-
-// Game Ended
-{ "type": "gameEnded" }
-```
-
-## Configuration
-
-Configure via environment variables:
+## Package as Executable
 
 ```bash
-PORT=8099 npm start   # Change port
+# Build for both Windows and Mac
+npm run build
+
+# Windows only
+npm run build:win
+
+# Mac only
+npm run build:mac
 ```
+
+Output in `dist/` directory.
+
+## 🚀 Automated Release (GitHub Actions)
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+GitHub Actions will automatically build and publish executables on the Releases page.
 
 ## How It Works
 
-1. The proxy service periodically polls `https://127.0.0.1:2999/liveclientdata/allgamedata` to detect game status.
-2. Once the game is running, it proxies all API requests to the local LoL service.
-3. It also pushes full game data every second via WebSocket.
-4. The service binds to `0.0.0.0`, allowing other devices on the LAN to access it via IP.
+1. Polls `https://127.0.0.1:2999/liveclientdata/allgamedata` to detect game status
+2. Proxies all API requests to the local LoL client
+3. Pushes game data via WebSocket to connected browsers
+4. AI Coach monitors events → generates roasts via LLM → converts to speech via TTS → streams audio to browser
+
+## License
+
+MIT

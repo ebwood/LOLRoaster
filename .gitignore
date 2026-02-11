@@ -1,3 +1,6 @@
 node_modules/
 dist/
 src_cjs/
+
+.env
+cache_tts

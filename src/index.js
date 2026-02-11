@@ -4,6 +4,9 @@ const { GameDetector } = require('./detector.js');
 const { createProxyServer } = require('./proxy.js');
 const { createWebSocketService } = require('./websocket.js');
 const coach = require('./coach/index.js');
+const tts = require('./coach/tts.js');
+const path = require('path');
+const fs = require('fs');
 const os = require('os');
 
 // Disable TLS certificate validation for LoL's self-signed cert
@@ -53,17 +56,51 @@ async function main() {
     });
   }
 
+  // Audio serving endpoint (serve cached TTS MP3 files)
+  app.get('/audio/:hash', (req, res) => {
+    const hash = req.params.hash.replace(/[^a-f0-9]/gi, ''); // Sanitize
+    const filePath = path.join(__dirname, '../cache_tts', `${hash}.mp3`);
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', 'audio/mpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      fs.createReadStream(filePath).pipe(res);
+    } else {
+      res.status(404).json({ error: 'Audio not found' });
+    }
+  });
+
+  // Settings Endpoint
+  app.post('/settings', (req, res) => {
+    try {
+      if (req.body.language) {
+        coach.setLanguage(req.body.language);
+      }
+      res.json({ status: 'ok', language: req.body.language });
+    } catch (e) {
+      res.status(500).json({ status: 'error', message: e.message });
+    }
+  });
+
   // App Info Endpoint
   app.get('/app-info', (req, res) => {
     res.json({
       version: require('../package.json').version,
       isPackaged: !!process.pkg,
-      debugEnabled: !process.pkg
+      debugEnabled: !process.pkg,
+      ttsProvider: config.tts.provider || 'edge'
     });
   });
 
   // 4. Attach WebSocket service
-  createWebSocketService(server, detector);
+  const wss = createWebSocketService(server, detector);
+
+  // 5. Relay TTS audio events to browser
+  tts.on('audioReady', (data) => {
+    const message = JSON.stringify({ type: 'audioReady', ...data });
+    for (const client of wss.clients) {
+      if (client.readyState === 1) client.send(message);
+    }
+  });
 
   // 5. Start listening
   server.listen(config.port, config.host, () => {

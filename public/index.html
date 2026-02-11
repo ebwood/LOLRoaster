@@ -331,6 +331,189 @@
     .debug-btn:active {
       transform: scale(0.95);
     }
+
+    /* Audio Player */
+    .audio-player {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(180deg, #1a1f35 0%, #0d1117 100%);
+      border-top: 1px solid rgba(201, 170, 113, 0.3);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      z-index: 1000;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .audio-player.visible {
+      transform: translateY(0);
+    }
+    .audio-player .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .audio-player .ctrl-btn {
+      background: none;
+      border: 1px solid rgba(201, 170, 113, 0.3);
+      color: #c9aa71;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+    .ctrl-btn:hover {
+      background: rgba(201, 170, 113, 0.15);
+      border-color: #c9aa71;
+    }
+    .ctrl-btn.play-btn {
+      width: 42px;
+      height: 42px;
+      font-size: 18px;
+      background: rgba(201, 170, 113, 0.1);
+    }
+    .audio-player .track-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .audio-player .track-text {
+      font-size: 13px;
+      color: #e0e6ed;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .audio-player .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      cursor: pointer;
+      position: relative;
+    }
+    .audio-player .progress-bar:hover {
+      height: 6px;
+    }
+    .audio-player .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #c9aa71, #f0d692);
+      border-radius: 2px;
+      transition: width 0.1s linear;
+      position: relative;
+    }
+    .audio-player .progress-fill::after {
+      content: '';
+      position: absolute;
+      right: -5px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 10px;
+      height: 10px;
+      background: #f0d692;
+      border-radius: 50%;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .audio-player .progress-bar:hover .progress-fill::after {
+      opacity: 1;
+    }
+    .audio-player .time-display {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #8892a4;
+      font-variant-numeric: tabular-nums;
+    }
+    .audio-player .provider-badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    .provider-badge.elevenlabs {
+      background: rgba(168, 85, 247, 0.15);
+      color: #a855f7;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+    .provider-badge.edge {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    .audio-player .close-btn {
+      background: none;
+      border: none;
+      color: #555e6e;
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+    .close-btn:hover {
+      color: #ef4444;
+    }
+    /* History list */
+    .audio-history {
+      position: fixed;
+      bottom: 76px;
+      right: 24px;
+      width: 360px;
+      max-height: 300px;
+      overflow-y: auto;
+      background: linear-gradient(145deg, #141924, #0f1320);
+      border: 1px solid rgba(201, 170, 113, 0.2);
+      border-radius: 12px;
+      z-index: 999;
+      display: none;
+    }
+    .audio-history.visible {
+      display: block;
+    }
+    .audio-history-item {
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      cursor: pointer;
+      font-size: 13px;
+      color: #a0aab8;
+      transition: background 0.15s;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .audio-history-item:hover {
+      background: rgba(201, 170, 113, 0.08);
+      color: #e0e6ed;
+    }
+    .audio-history-item .history-icon {
+      flex-shrink: 0;
+      font-size: 14px;
+    }
+    .audio-history-item .history-text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .audio-history-item .history-time {
+      font-size: 11px;
+      color: #555e6e;
+      flex-shrink: 0;
+    }
+    body { padding-bottom: 70px; } /* Space for fixed player */
   </style>
 </head>
 <body>
@@ -367,6 +550,7 @@
           <button class="debug-btn" style="background: #f1c40f; color: #000;" onclick="triggerDebugRoast('CS_GAP')">💰 模拟漏刀</button>
           <button class="debug-btn" style="background: #9b59b6;" onclick="triggerDebugRoast('TEAMMATE_DEATH')">🐷 队友被杀</button>
           <button class="debug-btn" style="background: #3498db;" onclick="triggerDebugRoast('OBJECTIVE')">🐉 模拟拿龙</button>
+          <button class="debug-btn" style="background: #2ecc71;" onclick="triggerDebugRoast('LLM_TEST')">🤖 测试 AI 嘲讽 (LLM)</button>
         </div>
       </div>
 
@@ -456,6 +640,31 @@
         <div class="events-list" id="eventsList"></div>
       </div>
     </div>
+  </div>
+
+  <!-- Audio Player -->
+  <div id="audioPlayer" class="audio-player">
+    <div class="controls">
+      <button class="ctrl-btn play-btn" id="playPauseBtn" onclick="togglePlayPause()" title="Play/Pause">▶</button>
+      <button class="ctrl-btn" onclick="replayAudio()" title="Replay">↺</button>
+      <button class="ctrl-btn" onclick="toggleHistory()" title="History">📋</button>
+    </div>
+    <div class="track-info">
+      <div class="track-text" id="trackText">--</div>
+      <div class="progress-bar" id="progressBar" onclick="seekAudio(event)">
+        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+      </div>
+      <div class="time-display">
+        <span id="currentTime">0:00</span>
+        <span id="totalTime">0:00</span>
+      </div>
+    </div>
+    <span id="providerBadge" class="provider-badge">--</span>
+    <button class="close-btn" onclick="closePlayer()" title="Close">✕</button>
+  </div>
+
+  <!-- Audio History -->
+  <div id="audioHistory" class="audio-history">
   </div>
 
   <script>
@@ -601,6 +810,13 @@
       localStorage.setItem('lol-proxy-lang', lang);
       document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
 
+      // Sync with backend
+      fetch('/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language: lang })
+      }).catch(console.error);
+
       // Update static elements
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
@@ -664,6 +880,10 @@
             updateGameStatus(true);
             lastGameData = msg.data;
             updateGameData(msg.data);
+            break;
+          case 'audioReady':
+            playAudio(msg.url, msg.text);
+            addToHistory(msg.text, msg.url);
             break;
         }
       };
@@ -873,6 +1093,113 @@
         .catch(err => console.error('Debug Roast Error:', err));
     }
 
+    // ===================== Audio Player =====================
+    const audioEl = new Audio();
+    const playerEl = document.getElementById('audioPlayer');
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const trackTextEl = document.getElementById('trackText');
+    const progressFill = document.getElementById('progressFill');
+    const currentTimeEl = document.getElementById('currentTime');
+    const totalTimeEl = document.getElementById('totalTime');
+    const providerBadge = document.getElementById('providerBadge');
+    const audioHistoryEl = document.getElementById('audioHistory');
+    let audioHistory = [];
+
+    function fmtTime(sec) {
+      if (!sec || isNaN(sec)) return '0:00';
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${s.toString().padStart(2, '0')}`;
+    }
+
+    audioEl.addEventListener('timeupdate', () => {
+      if (audioEl.duration) {
+        const pct = (audioEl.currentTime / audioEl.duration) * 100;
+        progressFill.style.width = pct + '%';
+        currentTimeEl.textContent = fmtTime(audioEl.currentTime);
+      }
+    });
+
+    audioEl.addEventListener('loadedmetadata', () => {
+      totalTimeEl.textContent = fmtTime(audioEl.duration);
+    });
+
+    audioEl.addEventListener('ended', () => {
+      playPauseBtn.textContent = '▶';
+      progressFill.style.width = '100%';
+    });
+
+    function playAudio(url, text) {
+      audioEl.src = url;
+      audioEl.play();
+      playPauseBtn.textContent = '⏸';
+      trackTextEl.textContent = text || 'Audio';
+      playerEl.classList.add('visible');
+
+      // Detect provider from page context
+      fetch('/app-info').then(r => r.json()).then(info => {
+        // We'll just detect from env - set by server
+      }).catch(() => {});
+    }
+
+    function togglePlayPause() {
+      if (!audioEl.src) return;
+      if (audioEl.paused) {
+        audioEl.play();
+        playPauseBtn.textContent = '⏸';
+      } else {
+        audioEl.pause();
+        playPauseBtn.textContent = '▶';
+      }
+    }
+
+    function replayAudio() {
+      if (!audioEl.src) return;
+      audioEl.currentTime = 0;
+      audioEl.play();
+      playPauseBtn.textContent = '⏸';
+    }
+
+    function seekAudio(e) {
+      if (!audioEl.duration) return;
+      const bar = document.getElementById('progressBar');
+      const rect = bar.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      audioEl.currentTime = pct * audioEl.duration;
+    }
+
+    function closePlayer() {
+      audioEl.pause();
+      playerEl.classList.remove('visible');
+      audioHistoryEl.classList.remove('visible');
+    }
+
+    function toggleHistory() {
+      audioHistoryEl.classList.toggle('visible');
+    }
+
+    function addToHistory(text, url) {
+      audioHistory.unshift({ text, url, time: new Date() });
+      if (audioHistory.length > 20) audioHistory.pop();
+      renderHistory();
+    }
+
+    function renderHistory() {
+      audioHistoryEl.innerHTML = audioHistory.map((item, i) => {
+        const ago = getTimeAgo(item.time);
+        const shortText = item.text.length > 50 ? item.text.substring(0, 50) + '...' : item.text;
+        return `<div class="audio-history-item" onclick="playAudio('${item.url}', '${item.text.replace(/'/g, "\\'")}')"><span class="history-icon">🔊</span><span class="history-text">${shortText}</span><span class="history-time">${ago}</span></div>`;
+      }).join('');
+    }
+
+    function getTimeAgo(date) {
+      const s = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (s < 60) return s + 's';
+      if (s < 3600) return Math.floor(s / 60) + 'm';
+      return Math.floor(s / 3600) + 'h';
+    }
+    // ===================== End Audio Player =====================
+
     // Check App Info (Debug Mode)
     fetch('/app-info')
       .then(res => res.json())
@@ -880,11 +1207,18 @@
         if (info.debugEnabled) {
           document.getElementById('debug-section').style.display = 'block';
         }
+        // Set provider badge
+        providerBadge.textContent = info.ttsProvider || 'edge';
+        providerBadge.className = `provider-badge ${(info.ttsProvider || 'edge')}`;
       })
       .catch(console.error);
 
     // Connect on page load
     setLanguage(currentLang);
+    // Initialize language on load (syncs with backend)
+    setLanguage(currentLang);
+
+    // Start WebSocket connection
     connectWebSocket();
   </script>
 </body>
