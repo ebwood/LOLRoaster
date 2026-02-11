@@ -1,6 +1,6 @@
 {
   "name": "lol-proxy",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "LoL Live Client Data API proxy - expose game data to LAN",
   "author": "ebwood",
   "main": "index.js",
@@ -41,7 +41,13 @@
     ],
     "mac": {
       "target": "dmg",
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "identity": "Developer ID Application: Chenpeng Lin (F469J2Y6K4)",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "electron/entitlements.mac.plist",
+      "entitlementsInherit": "electron/entitlements.mac.plist",
+      "notarize": true
     },
     "win": {
       "target": "nsis"
