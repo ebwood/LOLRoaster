@@ -2,9 +2,9 @@ const { app, BrowserWindow, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 
 // Start the Express/WS server
-require('../src/index.js');
+const server = require('../src/index.js');
 
-const PORT = process.env.PORT || 8099;
+const DEFAULT_PORT = process.env.PORT || 8099;
 let mainWindow = null;
 let tray = null;
 
@@ -12,6 +12,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: true,
     title: 'LoL Proxy - AI Coach',
     backgroundColor: '#0d1117',
     webPreferences: {
@@ -20,7 +21,19 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadURL(`http://localhost:${PORT}`);
+  // Retry loading if server isn't ready yet
+  const loadApp = () => {
+    const port = server.actualPort || DEFAULT_PORT;
+    mainWindow.loadURL(`http://localhost:${port}`).catch(() => {
+      setTimeout(loadApp, 1000);
+    });
+  };
+
+  loadApp();
+
+  mainWindow.webContents.on('did-fail-load', () => {
+    setTimeout(loadApp, 1000);
+  });
 
   mainWindow.on('close', (e) => {
     // Minimize to tray instead of quitting

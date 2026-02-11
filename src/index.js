@@ -116,25 +116,52 @@ async function main() {
     }
   });
 
-  // 5. Start listening
-  server.listen(config.port, config.host, () => {
-    const ips = getLocalIPs();
-    console.log(`✅ 代理服务已启动:`);
-    console.log(`   本机访问: http://localhost:${config.port}`);
-    for (const ip of ips) {
-      console.log(`   局域网访问 (${ip.name}): http://${ip.address}:${config.port}`);
-    }
-    console.log('');
-    console.log('📋 可用端点:');
-    console.log(`   GET /status                              - 服务状态`);
-    console.log(`   GET /liveclientdata/allgamedata           - 所有游戏数据`);
-    console.log(`   GET /liveclientdata/activeplayer           - 当前玩家数据`);
-    console.log(`   GET /liveclientdata/playerlist             - 所有玩家列表`);
-    console.log(`   GET /liveclientdata/eventdata              - 游戏事件`);
-    console.log(`   GET /liveclientdata/gamestats              - 游戏统计`);
-    console.log(`   WS  /ws                                   - WebSocket 实时推送`);
-    console.log('');
-  });
+  // 5. Start listening (auto-find available port)
+  const startPort = config.port;
+  let actualPort = startPort;
+
+  const tryListen = (port, retries = 10) => {
+    server.listen(port, config.host, () => {
+      actualPort = port;
+      module.exports.actualPort = actualPort;
+      const ips = getLocalIPs();
+      console.log(`✅ 代理服务已启动:`);
+      console.log(`   本机访问: http://localhost:${actualPort}`);
+      for (const ip of ips) {
+        console.log(`   局域网访问 (${ip.name}): http://${ip.address}:${actualPort}`);
+      }
+      if (actualPort !== startPort) {
+        console.log(`   ⚠️  端口 ${startPort} 被占用，已自动切换到 ${actualPort}`);
+      }
+      console.log('');
+      console.log('📋 可用端点:');
+      console.log(`   GET /status                              - 服务状态`);
+      console.log(`   GET /liveclientdata/allgamedata           - 所有游戏数据`);
+      console.log(`   GET /liveclientdata/activeplayer           - 当前玩家数据`);
+      console.log(`   GET /liveclientdata/playerlist             - 所有玩家列表`);
+      console.log(`   GET /liveclientdata/eventdata              - 游戏事件`);
+      console.log(`   GET /liveclientdata/gamestats              - 游戏统计`);
+      console.log(`   WS  /ws                                   - WebSocket 实时推送`);
+      console.log('');
+    });
+
+    server.on('error', (err) => {
+      if (err.code === 'EADDRINUSE' && retries > 0) {
+        server.removeAllListeners('error');
+        console.log(`⚠️  端口 ${port} 被占用，尝试 ${port + 1}...`);
+        server.listen(port + 1, config.host);
+        // Re-register for the new attempt
+        server.once('listening', () => {
+          actualPort = port + 1;
+          module.exports.actualPort = actualPort;
+        });
+      } else {
+        console.error(`❌ 无法启动服务: ${err.message}`);
+      }
+    });
+  };
+
+  tryListen(startPort);
 
   // 6. Start game detection
   detector.start();
