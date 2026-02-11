@@ -4,11 +4,13 @@ const logger = require('../logger');
 
 class LLMService {
   constructor() {
-    this.apiKey = config.llm.apiKey;
-    this.baseUrl = config.llm.baseUrl.replace(/\/$/, ''); // Remove trailing slash
-    this.model = config.llm.model;
-    this.enabled = config.llm.enabled && this.apiKey.length > 0;
+    // Config is read dynamically via getters for hot-reload support
   }
+
+  get apiKey() { return config.llm.apiKey; }
+  get baseUrl() { return config.llm.baseUrl.replace(/\/$/, ''); }
+  get model() { return config.llm.model; }
+  get enabled() { return config.llm.enabled && this.apiKey.length > 0; }
 
   async generateRoast(context) {
     if (!this.enabled) {

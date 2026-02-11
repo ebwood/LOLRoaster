@@ -23,7 +23,7 @@ class TTS extends EventEmitter {
     this.cacheDir = this._getCacheDir();
     this.currentProcess = null; // Track current play-sound process
 
-    // TTS Provider
+    // TTS Provider (read dynamically from config for hot-reload)
     this.provider = config.tts.provider || 'edge';
     this.elevenlabsApiKey = config.tts.elevenlabs.apiKey;
     this.elevenlabsVoiceId = config.tts.elevenlabs.voiceId;
@@ -36,6 +36,29 @@ class TTS extends EventEmitter {
     }
 
     logger.tts(`Provider: ${this.provider}${this.provider === 'elevenlabs' ? ` (Voice: ${this.elevenlabsVoiceId})` : ''}`);
+  }
+
+  // Re-read config (called after settings update)
+  reloadConfig() {
+    this.provider = config.tts.provider || 'edge';
+    this.elevenlabsApiKey = config.tts.elevenlabs.apiKey;
+    this.elevenlabsVoiceId = config.tts.elevenlabs.voiceId;
+    logger.tts(`Config reloaded → Provider: ${this.provider}`);
+  }
+
+  // Clear all cached TTS files
+  clearCache() {
+    try {
+      const files = fs.readdirSync(this.cacheDir).filter(f => f.endsWith('.mp3'));
+      for (const f of files) {
+        fs.unlinkSync(path.join(this.cacheDir, f));
+      }
+      logger.tts(`Cache cleared: ${files.length} files removed`);
+      return files.length;
+    } catch (e) {
+      logger.error(`Failed to clear cache: ${e.message}`);
+      return 0;
+    }
   }
 
   _getCacheDir() {
@@ -160,12 +183,17 @@ class TTS extends EventEmitter {
       const hash = this.getHash(text);
       let filePath = this.getFilePath(hash);
 
-      // If not cached, generate
-      if (!fs.existsSync(filePath)) {
-        logger.tts(`Cache miss for: "${text.substring(0, 50)}...". Generating via ${this.provider}...`);
-        await this.generateFile(text, filePath);
-      } else {
+      // Check cache (skip if cache disabled)
+      const useCache = config.tts.cache !== false;
+      if (useCache && fs.existsSync(filePath)) {
         logger.tts(`Speaking (Cached): "${text.substring(0, 50)}..."`);
+      } else {
+        if (!useCache) {
+          logger.tts(`Cache disabled. Generating via ${this.provider}...`);
+        } else {
+          logger.tts(`Cache miss for: "${text.substring(0, 50)}...". Generating via ${this.provider}...`);
+        }
+        await this.generateFile(text, filePath);
       }
 
       // Add to history for web UI

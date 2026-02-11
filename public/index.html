@@ -839,23 +839,40 @@
         <div class="settings-field settings-toggle">
           <label>Enable AI Coach</label>
           <label class="toggle-switch">
-            <input type="checkbox" id="sLlmEnabled">
+            <input type="checkbox" id="sLlmEnabled" onchange="toggleLlmFields()">
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <div id="llmFields">
         <div class="settings-field">
-          <label>Base URL</label>
-          <input id="sLlmBaseUrl" placeholder="https://generativelanguage.googleapis.com/v1beta/openai/">
-          <div class="hint">OpenAI-compatible endpoint. Works with Gemini, OpenAI, DeepSeek, Ollama, etc.</div>
+          <label>Provider</label>
+          <select id="sLlmProvider">
+            <option value="google">Google Gemini</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="openai">OpenAI</option>
+            <option value="ollama">Ollama (Local)</option>
+            <option value="custom">Custom Endpoint</option>
+          </select>
+          <div class="hint" id="sLlmProviderHint"></div>
         </div>
         <div class="settings-field">
           <label>API Key</label>
           <input id="sLlmApiKey" type="password" placeholder="Enter API key">
           <div class="hint">Leave empty to keep current key unchanged</div>
         </div>
-        <div class="settings-field">
-          <label>Model</label>
-          <input id="sLlmModel" placeholder="gemini-2.0-flash">
+        <div id="llmAdvancedFields" style="display:none">
+          <div class="settings-field">
+            <label>Base URL</label>
+            <input id="sLlmBaseUrl" placeholder="">
+          </div>
+          <div class="settings-field">
+            <label>Model</label>
+            <input id="sLlmModel" placeholder="">
+          </div>
+        </div>
+        <div class="settings-field" style="margin-top: 4px;">
+          <a href="#" onclick="toggleLlmAdvanced(event)" id="llmAdvancedToggle" style="color: #8b949e; font-size: 12px;">▶ Advanced</a>
+        </div>
         </div>
       </div>
 
@@ -867,6 +884,17 @@
             <option value="edge">Edge TTS (Free)</option>
             <option value="elevenlabs">ElevenLabs (Premium)</option>
           </select>
+        </div>
+        <div class="settings-field settings-toggle">
+          <label>Use Cache</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="sTtsCache" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-field">
+          <button onclick="clearTtsCache()" style="background: #b91c1c; color: white; border: none; padding: 6px 16px; border-radius: 6px; cursor: pointer; font-size: 13px;">🗑️ Clear TTS Cache</button>
+          <div class="hint">Delete all cached audio files</div>
         </div>
         <div id="elevenlabsSettings">
           <div class="settings-field">
@@ -1049,20 +1077,36 @@
       }
     }
     // --- Settings ---
+    let llmProviders = {};
+    let llmAdvancedOpen = false;
+
+    function toggleLlmFields() {
+      const enabled = document.getElementById('sLlmEnabled').checked;
+      document.getElementById('llmFields').style.display = enabled ? 'block' : 'none';
+    }
+
     function openSettings() {
       fetch('/settings')
         .then(r => r.json())
         .then(data => {
+          llmProviders = data.llmProviders || {};
           document.getElementById('sLlmEnabled').checked = data.llmEnabled;
-          document.getElementById('sLlmBaseUrl').value = data.llmBaseUrl || '';
+          document.getElementById('sLlmProvider').value = data.llmProvider || 'deepseek';
           document.getElementById('sLlmApiKey').value = '';
-          document.getElementById('sLlmApiKey').placeholder = data.llmApiKey || 'Enter API key';
+          document.getElementById('sLlmApiKey').placeholder = data.llmApiKey ? `Already set (${data.llmApiKey})` : 'Enter API key';
+          document.getElementById('sLlmBaseUrl').value = data.llmBaseUrl || '';
           document.getElementById('sLlmModel').value = data.llmModel || '';
           document.getElementById('sTtsProvider').value = data.ttsProvider || 'edge';
+          document.getElementById('sTtsCache').checked = data.ttsCache !== false;
           document.getElementById('sElevenlabsApiKey').value = '';
-          document.getElementById('sElevenlabsApiKey').placeholder = data.elevenlabsApiKey || 'Enter API key';
+          document.getElementById('sElevenlabsApiKey').placeholder = data.elevenlabsApiKey ? `Already set (${data.elevenlabsApiKey})` : 'Enter API key';
           document.getElementById('sElevenlabsVoiceId').value = data.elevenlabsVoiceId || '';
+          onLlmProviderChange(false);
+          toggleLlmFields();
           toggleElevenlabsFields();
+          // Auto-show advanced if custom
+          llmAdvancedOpen = data.llmProvider === 'custom';
+          updateAdvancedVisibility();
           document.getElementById('settingsStatus').textContent = '';
           document.getElementById('settingsOverlay').classList.add('visible');
         })
@@ -1073,13 +1117,55 @@
       document.getElementById('settingsOverlay').classList.remove('visible');
     }
 
+    function onLlmProviderChange(resetFields = true) {
+      const provider = document.getElementById('sLlmProvider').value;
+      const preset = llmProviders[provider];
+      const hint = document.getElementById('sLlmProviderHint');
+      if (preset) {
+        hint.textContent = preset.hint || '';
+        if (resetFields) {
+          document.getElementById('sLlmBaseUrl').value = preset.baseUrl || '';
+          document.getElementById('sLlmModel').value = preset.defaultModel || '';
+        }
+        document.getElementById('sLlmBaseUrl').placeholder = preset.baseUrl || 'Enter base URL';
+        document.getElementById('sLlmModel').placeholder = preset.defaultModel || 'Enter model name';
+      }
+      // Auto-show advanced for custom
+      if (provider === 'custom' && !llmAdvancedOpen) {
+        llmAdvancedOpen = true;
+        updateAdvancedVisibility();
+      }
+    }
+
+    function toggleLlmAdvanced(e) {
+      e.preventDefault();
+      llmAdvancedOpen = !llmAdvancedOpen;
+      updateAdvancedVisibility();
+    }
+
+    function updateAdvancedVisibility() {
+      document.getElementById('llmAdvancedFields').style.display = llmAdvancedOpen ? 'block' : 'none';
+      document.getElementById('llmAdvancedToggle').textContent = (llmAdvancedOpen ? '▼' : '▶') + ' Advanced';
+    }
+
     function toggleElevenlabsFields() {
       const show = document.getElementById('sTtsProvider').value === 'elevenlabs';
       document.getElementById('elevenlabsSettings').style.display = show ? 'block' : 'none';
     }
 
-    // Bind provider change
+    function clearTtsCache() {
+      if (!confirm('Delete all cached TTS audio files?')) return;
+      fetch('/tts/clear-cache', { method: 'POST' })
+        .then(r => r.json())
+        .then(data => {
+          alert(`Cleared ${data.count || 0} cached files.`);
+        })
+        .catch(e => alert('Failed: ' + e.message));
+    }
+
+    // Bind change events
     document.getElementById('sTtsProvider').addEventListener('change', toggleElevenlabsFields);
+    document.getElementById('sLlmProvider').addEventListener('change', () => onLlmProviderChange(true));
 
     function saveSettings() {
       const btn = document.querySelector('.settings-save');
@@ -1088,15 +1174,19 @@
       status.textContent = 'Saving...';
       status.className = 'settings-status';
 
+      const provider = document.getElementById('sLlmProvider').value;
       const body = {};
       body.llmEnabled = document.getElementById('sLlmEnabled').checked;
-      const baseUrl = document.getElementById('sLlmBaseUrl').value.trim();
-      if (baseUrl) body.llmBaseUrl = baseUrl;
+      body.llmProvider = provider;
       const apiKey = document.getElementById('sLlmApiKey').value.trim();
       if (apiKey) body.llmApiKey = apiKey;
+      // Always send baseUrl and model so user overrides are preserved
+      const baseUrl = document.getElementById('sLlmBaseUrl').value.trim();
+      if (baseUrl) body.llmBaseUrl = baseUrl;
       const model = document.getElementById('sLlmModel').value.trim();
       if (model) body.llmModel = model;
       body.ttsProvider = document.getElementById('sTtsProvider').value;
+      body.ttsCache = document.getElementById('sTtsCache').checked;
       const elKey = document.getElementById('sElevenlabsApiKey').value.trim();
       if (elKey) body.elevenlabsApiKey = elKey;
       const voiceId = document.getElementById('sElevenlabsVoiceId').value.trim();

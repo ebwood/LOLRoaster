@@ -69,18 +69,6 @@ async function main() {
     }
   });
 
-  // Settings Endpoint
-  app.post('/settings', (req, res) => {
-    try {
-      if (req.body.language) {
-        coach.setLanguage(req.body.language);
-      }
-      res.json({ status: 'ok', language: req.body.language });
-    } catch (e) {
-      res.status(500).json({ status: 'error', message: e.message });
-    }
-  });
-
   // App Info Endpoint
   app.get('/app-info', (req, res) => {
     res.json({
@@ -98,11 +86,29 @@ async function main() {
 
   app.post('/settings', require('express').json(), (req, res) => {
     try {
-      config.updateConfig(req.body);
-      res.json({ status: 'ok', message: 'Settings saved. Some changes may require restart.' });
+      // Handle language change for coach (runtime only, not saved to config.json)
+      if (req.body.language) {
+        coach.setLanguage(req.body.language);
+      }
+      // Only save to config.json when real settings fields are present
+      const hasSettings = req.body.llmEnabled !== undefined || req.body.llmProvider ||
+        req.body.llmApiKey || req.body.ttsProvider || req.body.elevenlabsApiKey ||
+        req.body.ttsCache !== undefined;
+      if (hasSettings) {
+        config.updateConfig(req.body);
+        // Hot-reload TTS config
+        tts.reloadConfig();
+      }
+      res.json({ status: 'ok', message: 'Settings saved.' });
     } catch (e) {
       res.status(500).json({ status: 'error', message: e.message });
     }
+  });
+
+  // TTS Cache Management
+  app.post('/tts/clear-cache', (req, res) => {
+    const count = tts.clearCache();
+    res.json({ status: 'ok', count });
   });
 
   // 4. Attach WebSocket service
@@ -117,51 +123,61 @@ async function main() {
   });
 
   // 5. Start listening (auto-find available port)
-  const startPort = config.port;
+  const startPort = parseInt(config.port, 10);
   let actualPort = startPort;
 
-  const tryListen = (port, retries = 10) => {
-    server.listen(port, config.host, () => {
-      actualPort = port;
-      module.exports.actualPort = actualPort;
-      const ips = getLocalIPs();
-      console.log(`✅ 代理服务已启动:`);
-      console.log(`   本机访问: http://localhost:${actualPort}`);
-      for (const ip of ips) {
-        console.log(`   局域网访问 (${ip.name}): http://${ip.address}:${actualPort}`);
-      }
-      if (actualPort !== startPort) {
-        console.log(`   ⚠️  端口 ${startPort} 被占用，已自动切换到 ${actualPort}`);
-      }
-      console.log('');
-      console.log('📋 可用端点:');
-      console.log(`   GET /status                              - 服务状态`);
-      console.log(`   GET /liveclientdata/allgamedata           - 所有游戏数据`);
-      console.log(`   GET /liveclientdata/activeplayer           - 当前玩家数据`);
-      console.log(`   GET /liveclientdata/playerlist             - 所有玩家列表`);
-      console.log(`   GET /liveclientdata/eventdata              - 游戏事件`);
-      console.log(`   GET /liveclientdata/gamestats              - 游戏统计`);
-      console.log(`   WS  /ws                                   - WebSocket 实时推送`);
-      console.log('');
-    });
-
-    server.on('error', (err) => {
-      if (err.code === 'EADDRINUSE' && retries > 0) {
-        server.removeAllListeners('error');
-        console.log(`⚠️  端口 ${port} 被占用，尝试 ${port + 1}...`);
-        server.listen(port + 1, config.host);
-        // Re-register for the new attempt
-        server.once('listening', () => {
-          actualPort = port + 1;
-          module.exports.actualPort = actualPort;
+  function findAvailablePort(port, maxRetries = 10) {
+    return new Promise((resolve, reject) => {
+      const net = require('net');
+      function tryPort(p, retries) {
+        const tester = net.createServer();
+        tester.once('error', (err) => {
+          if (err.code === 'EADDRINUSE' && retries > 0) {
+            console.log(`⚠️  端口 ${p} 被占用，尝试 ${p + 1}...`);
+            tryPort(p + 1, retries - 1);
+          } else {
+            reject(err);
+          }
         });
-      } else {
-        console.error(`❌ 无法启动服务: ${err.message}`);
+        tester.once('listening', () => {
+          tester.close(() => resolve(p));
+        });
+        tester.listen(p, config.host);
       }
+      tryPort(port, maxRetries);
     });
-  };
+  }
 
-  tryListen(startPort);
+  try {
+    actualPort = await findAvailablePort(startPort);
+  } catch (err) {
+    console.error(`❌ 无法找到可用端口: ${err.message}`);
+    process.exit(1);
+  }
+
+  module.exports.actualPort = actualPort;
+
+  server.listen(actualPort, config.host, () => {
+    const ips = getLocalIPs();
+    console.log(`✅ 代理服务已启动:`);
+    console.log(`   本机访问: http://localhost:${actualPort}`);
+    for (const ip of ips) {
+      console.log(`   局域网访问 (${ip.name}): http://${ip.address}:${actualPort}`);
+    }
+    if (actualPort !== startPort) {
+      console.log(`   ⚠️  端口 ${startPort} 被占用，已自动切换到 ${actualPort}`);
+    }
+    console.log('');
+    console.log('📋 可用端点:');
+    console.log(`   GET /status                              - 服务状态`);
+    console.log(`   GET /liveclientdata/allgamedata           - 所有游戏数据`);
+    console.log(`   GET /liveclientdata/activeplayer           - 当前玩家数据`);
+    console.log(`   GET /liveclientdata/playerlist             - 所有玩家列表`);
+    console.log(`   GET /liveclientdata/eventdata              - 游戏事件`);
+    console.log(`   GET /liveclientdata/gamestats              - 游戏统计`);
+    console.log(`   WS  /ws                                   - WebSocket 实时推送`);
+    console.log('');
+  });
 
   // 6. Start game detection
   detector.start();
