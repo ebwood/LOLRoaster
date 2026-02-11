@@ -42,7 +42,6 @@
     "mac": {
       "target": "dmg",
       "category": "public.app-category.utilities",
-      "identity": "Developer ID Application: Chenpeng Lin (F469J2Y6K4)",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "electron/entitlements.mac.plist",
