@@ -91,6 +91,20 @@ async function main() {
     });
   });
 
+  // Settings API
+  app.get('/settings', (req, res) => {
+    res.json(config.getSettingsForUI());
+  });
+
+  app.post('/settings', require('express').json(), (req, res) => {
+    try {
+      config.updateConfig(req.body);
+      res.json({ status: 'ok', message: 'Settings saved. Some changes may require restart.' });
+    } catch (e) {
+      res.status(500).json({ status: 'error', message: e.message });
+    }
+  });
+
   // 4. Attach WebSocket service
   const wss = createWebSocketService(server, detector);
 

@@ -4,4 +4,5 @@ dist-electron/
 src_cjs/
 
 .env
+config.json
 cache_tts
