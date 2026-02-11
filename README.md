@@ -1,107 +1,108 @@
 # LoL Live Client Data Proxy
 
-将 LoL 英雄联盟游戏运行时的 [Live Client Data API](https://developer.riotgames.com/docs/lol#game-client-api_live-client-data-api) 代理暴露到局域网，供其他设备访问。
+[English](README.md) | [简体中文](README_zh-CN.md)
 
-## 功能
+Expose the League of Legends [Live Client Data API](https://developer.riotgames.com/docs/lol#game-client-api_live-client-data-api) to your local network (LAN) for access by other devices.
 
-- 🔍 **自动检测** — 自动检测 LoL 游戏是否在运行
-- 🔄 **HTTP 代理** — 代理转发所有 `/liveclientdata/*` 端点
-- 📡 **WebSocket 推送** — 通过 WebSocket 实时推送游戏数据
-- 📊 **状态面板** — Web 页面查看游戏状态、玩家数据、事件
+## Features
 
-## 快速开始
+- 🔍 **Auto Detection** — Automatically detects if the LoL game client is running.
+- 🔄 **HTTP Proxy** — Proxies all `/liveclientdata/*` endpoints.
+- 📡 **WebSocket Push** — Pushes real-time game data via WebSocket.
+- 📊 **Status Dashboard** — Web interface to view game status, player data, and events.
+
+## Quick Start
 
 ```bash
-# 安装依赖
+# Install dependencies
 npm install
 
-# 启动服务
+# Start the service
 npm start
 
-# 开发模式 (自动重启)
+# Development mode (auto-restart)
 npm run dev
 ```
 
-启动后会显示局域网访问地址，在另一台电脑浏览器输入该地址即可访问。
+Once started, the LAN access address will be displayed. You can access it by entering this address in a browser on another device.
 
-## 打包成可执行文件 (给玩家使用)
+## Package as Executable (For End Users)
 
-如果你想把这个程序发给朋友使用（无需安装 Node.js），可以运行以下命令生成 `.exe` (Windows) 或可执行文件 (Mac)：
+If you want to distribute this program to friends (who may not have Node.js installed), you can run the following commands to generate standalone executables for Windows (`.exe`) or macOS:
 
 ```bash
-# 生成 Windows 和 Mac 版本
+# Generate for both Windows and Mac
 npm run build
 
-# 仅生成 Windows 版本
+# Generate for Windows only
 npm run build:win
 
-# 仅生成 Mac 版本
+# Generate for Mac only
 npm run build:mac
 ```
 
-生成的文件位于 `dist/` 目录下。
+The generated files can be found in the `dist/` directory.
 
-## 🚀 自动发布流程 (GitHub Actions)
+## 🚀 Automated Release Workflow (GitHub Actions)
 
-本项目配置了自动化发布流程。当你需要发布新版本时：
+This project is configured with an automated release workflow. To publish a new version:
 
-1.  **打标签**:
+1.  **Create a Tag**:
     ```bash
     git tag v1.0.0
     ```
-2.  **推送标签**:
+2.  **Push the Tag**:
     ```bash
     git push origin v1.0.0
     ```
 
-推送后，GitHub Actions 会自动构建项目，并在 GitHub 仓库的 **Releases** 页面发布新版本，包含 Windows (`lol-proxy-win.exe`) 和 Mac (`lol-proxy-macos`) 可执行文件供下载。
+After pushing, GitHub Actions will automatically build the project and publish a new version on the GitHub repository's **Releases** page, including executables for Windows (`lol-proxy-win.exe`) and Mac (`lol-proxy-macos`).
 
+## API Endpoints
 
-## API 端点
-
-| 端点 | 说明 |
+| Endpoint | Description |
 |------|------|
-| `GET /status` | 代理服务状态 |
-| `GET /liveclientdata/allgamedata` | 所有游戏数据 |
-| `GET /liveclientdata/activeplayer` | 当前玩家 |
-| `GET /liveclientdata/activeplayerabilities` | 当前玩家技能 |
-| `GET /liveclientdata/activeplayername` | 当前玩家名称 |
-| `GET /liveclientdata/activeplayerrunes` | 当前玩家符文 |
-| `GET /liveclientdata/eventdata` | 游戏事件 |
-| `GET /liveclientdata/gamestats` | 游戏统计 |
-| `GET /liveclientdata/playerlist` | 所有玩家列表 |
-| `GET /liveclientdata/playeritems?summonerName=xxx` | 玩家装备 |
-| `GET /liveclientdata/playerscores?summonerName=xxx` | 玩家分数 |
-| `GET /liveclientdata/playersummonerspells?summonerName=xxx` | 召唤师技能 |
-| `WS /ws` | WebSocket 实时推送 |
+| `GET /status` | Proxy service status |
+| `GET /liveclientdata/allgamedata` | All game data |
+| `GET /liveclientdata/activeplayer` | Active player data |
+| `GET /liveclientdata/activeplayerabilities` | Active player abilities |
+| `GET /liveclientdata/activeplayername` | Active player name |
+| `GET /liveclientdata/activeplayerrunes` | Active player runes |
+| `GET /liveclientdata/eventdata` | Game events |
+| `GET /liveclientdata/gamestats` | Game statistics |
+| `GET /liveclientdata/playerlist` | Player list |
+| `GET /liveclientdata/playeritems?summonerName=xxx` | Player items |
+| `GET /liveclientdata/playerscores?summonerName=xxx` | Player scores |
+| `GET /liveclientdata/playersummonerspells?summonerName=xxx` | Player summoner spells |
+| `WS /ws` | WebSocket real-time push |
 
-## WebSocket 消息格式
+## WebSocket Message Format
 
 ```json
-// 游戏状态
+// Service Status
 { "type": "status", "gameRunning": true }
 
-// 游戏开始
+// Game Started
 { "type": "gameStarted" }
 
-// 游戏数据 (每秒推送)
+// Game Data (Pushed every second)
 { "type": "gameData", "data": { ... }, "timestamp": 1234567890 }
 
-// 游戏结束
+// Game Ended
 { "type": "gameEnded" }
 ```
 
-## 配置
+## Configuration
 
-通过环境变量配置:
+Configure via environment variables:
 
 ```bash
-PORT=8099 npm start   # 修改端口
+PORT=8099 npm start   # Change port
 ```
 
-## 工作原理
+## How It Works
 
-1. 代理服务定期请求 `https://127.0.0.1:2999/liveclientdata/allgamedata` 检测游戏状态
-2. 检测到游戏运行后，将所有 API 请求代理转发到 LoL 本地服务
-3. 同时通过 WebSocket 每秒推送完整游戏数据
-4. 服务绑定 `0.0.0.0` 允许局域网其他设备通过 IP 访问
+1. The proxy service periodically polls `https://127.0.0.1:2999/liveclientdata/allgamedata` to detect game status.
+2. Once the game is running, it proxies all API requests to the local LoL service.
+3. It also pushes full game data every second via WebSocket.
+4. The service binds to `0.0.0.0`, allowing other devices on the LAN to access it via IP.

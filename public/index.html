@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LoL Live Client Data Proxy</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <style>
     * {
       margin: 0;
@@ -298,30 +299,51 @@
       padding: 8px 32px 8px;
       text-align: right;
     }
+    .lang-switch {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e0e6ed;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      margin-left: 12px;
+      transition: all 0.2s;
+    }
+
+    .lang-switch:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
   </style>
 </head>
 <body>
   <div class="header">
-    <h1>⚔️ LoL Live Client Data Proxy</h1>
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center;">
+        <img src="favicon.svg" alt="icon" style="height: 32px; width: 32px; margin-right: 12px;">
+        <h1 data-i18n="title">LoL Live Client Data Proxy</h1>
+      </div>
+      <button id="langSwitch" class="lang-switch" onclick="toggleLanguage()">EN / 中</button>
+    </div>
     <div id="statusBadge" class="status-badge offline">
       <span class="status-dot"></span>
-      <span id="statusText">等待连接...</span>
+      <span id="statusText" data-i18n="status.waiting">等待连接...</span>
     </div>
   </div>
 
   <div class="connection-info">
-    WebSocket: <span id="wsStatus">连接中...</span>
+    <span data-i18n="ws.label">WebSocket:</span> <span id="wsStatus" data-i18n="ws.connecting">连接中...</span>
   </div>
 
   <div class="container">
     <!-- Waiting Screen (shown when no game) -->
     <div id="waitingScreen" class="waiting-screen">
       <div class="waiting-icon">🎮</div>
-      <div class="waiting-text">等待 LoL 游戏启动...</div>
-      <div class="waiting-sub">当游戏开始后，数据将自动显示在这里</div>
+      <div class="waiting-text" data-i18n="waiting.title">等待 LoL 游戏启动...</div>
+      <div class="waiting-sub" data-i18n="waiting.desc">当游戏开始后，数据将自动显示在这里</div>
 
       <div class="section" style="margin-top: 40px; width: 100%; max-width: 600px;">
-        <div class="section-header">📋 API 端点</div>
+        <div class="section-header" data-i18n="api.title">📋 API 端点</div>
         <div class="api-list">
           <div class="api-item">
             <span class="api-method">GET</span>
@@ -359,38 +381,38 @@
     <div id="gameScreen" style="display: none;">
       <div class="grid">
         <div class="card">
-          <div class="card-label">游戏时间</div>
+          <div class="card-label" data-i18n="card.time">游戏时间</div>
           <div class="card-value" id="gameTime">--:--</div>
         </div>
         <div class="card">
-          <div class="card-label">游戏模式</div>
+          <div class="card-label" data-i18n="card.mode">游戏模式</div>
           <div class="card-value small" id="gameMode">--</div>
         </div>
         <div class="card">
-          <div class="card-label">地图</div>
+          <div class="card-label" data-i18n="card.map">地图</div>
           <div class="card-value small" id="mapName">--</div>
         </div>
       </div>
 
       <!-- Active Player -->
       <div class="section">
-        <div class="section-header">🏆 当前玩家</div>
+        <div class="section-header" data-i18n="player.title">🏆 当前玩家</div>
         <div style="padding: 16px 20px;">
-          <div id="activePlayer" style="font-size: 14px; color: #a0aab8;">加载中...</div>
+          <div id="activePlayer" style="font-size: 14px; color: #a0aab8;" data-i18n="loading">加载中...</div>
         </div>
       </div>
 
       <!-- Player List -->
       <div class="section">
-        <div class="section-header">👥 所有玩家</div>
+        <div class="section-header" data-i18n="all_players.title">👥 所有玩家</div>
         <div style="overflow-x: auto;">
           <table class="player-table">
             <thead>
               <tr>
-                <th>队伍</th>
-                <th>召唤师</th>
-                <th>英雄</th>
-                <th>等级</th>
+                <th data-i18n="table.team">队伍</th>
+                <th data-i18n="table.summoner">召唤师</th>
+                <th data-i18n="table.champion">英雄</th>
+                <th data-i18n="table.level">等级</th>
                 <th>KDA</th>
                 <th>CS</th>
               </tr>
@@ -402,13 +424,171 @@
 
       <!-- Events -->
       <div class="section">
-        <div class="section-header">📜 游戏事件</div>
+        <div class="section-header" data-i18n="events.title">📜 游戏事件</div>
         <div class="events-list" id="eventsList"></div>
       </div>
     </div>
   </div>
 
   <script>
+    const i18n = {
+      zh: {
+        title: "LoL Live Client Data Proxy",
+        "status.waiting": "等待连接...",
+        "status.online": "游戏进行中",
+        "status.offline": "等待游戏...",
+        "ws.label": "WebSocket:",
+        "ws.connecting": "连接中...",
+        "ws.connected": "已连接 ✓",
+        "ws.disconnected": "已断开 (重连中...)",
+        "waiting.title": "等待 LoL 游戏启动...",
+        "waiting.desc": "当游戏开始后，数据将自动显示在这里",
+        "api.title": "📋 API 端点",
+        "card.time": "游戏时间",
+        "card.mode": "游戏模式",
+        "card.map": "地图",
+        "player.title": "🏆 当前玩家",
+        "loading": "加载中...",
+        "player.gold": "当前金币",
+        "player.ad": "攻击力",
+        "player.ap": "法强",
+        "player.armor": "护甲",
+        "player.mr": "魔抗",
+        "all_players.title": "👥 所有玩家",
+        "table.team": "队伍",
+        "table.summoner": "召唤师",
+        "table.champion": "英雄",
+        "table.level": "等级",
+        "team.order": "蓝队",
+        "team.chaos": "红队",
+        "events.title": "📜 游戏事件",
+        "event.kill": "击杀了",
+        "event.assist": "助攻",
+        "event.multikill.2": "双杀",
+        "event.multikill.3": "三杀",
+        "event.multikill.4": "四杀",
+        "event.multikill.5": "五杀",
+        "event.multikill.x": "连杀",
+        "event.ace": "团灭!",
+        "event.ace_desc": "完成了团灭",
+        "event.firstblood": "第一滴血!",
+        "event.turret": "防御塔",
+        "event.inhib": "水晶",
+        "event.destroy": "摧毁了",
+        "event.inhib_soon": "水晶即将重生",
+        "event.inhib_respawn": "水晶已重生",
+        "event.dragon": "巨龙",
+        "event.dragon.Fire": "火龙",
+        "event.dragon.Water": "水龙",
+        "event.dragon.Earth": "土龙",
+        "event.dragon.Air": "风龙",
+        "event.dragon.Hextech": "海克斯龙",
+        "event.dragon.Chemtech": "化学龙",
+        "event.dragon.Elder": "远古巨龙",
+        "event.herald": "峡谷先锋",
+        "event.baron": "纳什男爵",
+        "event.stolen": "(偷取!)",
+        "event.start": "游戏开始",
+        "event.end": "游戏结束",
+        "event.win": "胜利",
+        "event.loss": "失败",
+        "event.minions": "小兵已出发",
+        "unknown": "未知",
+        "minion": "小兵"
+      },
+      en: {
+        title: "LoL Live Client Data Proxy",
+        "status.waiting": "Waiting for connection...",
+        "status.online": "Game Running",
+        "status.offline": "Waiting for Game...",
+        "ws.label": "WebSocket:",
+        "ws.connecting": "Connecting...",
+        "ws.connected": "Connected ✓",
+        "ws.disconnected": "Disconnected (Reconnecting...)",
+        "waiting.title": "Waiting for LoL Client...",
+        "waiting.desc": "Data will appear here automatically when the game starts",
+        "api.title": "📋 API Endpoints",
+        "card.time": "Game Time",
+        "card.mode": "Game Mode",
+        "card.map": "Map",
+        "player.title": "🏆 Active Player",
+        "loading": "Loading...",
+        "player.gold": "Gold",
+        "player.ad": "AD",
+        "player.ap": "AP",
+        "player.armor": "Armor",
+        "player.mr": "MR",
+        "all_players.title": "👥 All Players",
+        "table.team": "Team",
+        "table.summoner": "Summoner",
+        "table.champion": "Champion",
+        "table.level": "Level",
+        "team.order": "Order",
+        "team.chaos": "Chaos",
+        "events.title": "📜 Game Events",
+        "event.kill": "killed",
+        "event.assist": "Assist",
+        "event.multikill.2": "Double Kill",
+        "event.multikill.3": "Triple Kill",
+        "event.multikill.4": "Quadra Kill",
+        "event.multikill.5": "Penta Kill",
+        "event.multikill.x": "Multi Kill",
+        "event.ace": "Ace!",
+        "event.ace_desc": "scored an Ace",
+        "event.firstblood": "First Blood!",
+        "event.turret": "Turret",
+        "event.inhib": "Inhibitor",
+        "event.destroy": "destroyed",
+        "event.inhib_soon": "Inhibitor Respawning Soon",
+        "event.inhib_respawn": "Inhibitor Respawned",
+        "event.dragon": "Dragon",
+        "event.dragon.Fire": "Infernal Drake",
+        "event.dragon.Water": "Ocean Drake",
+        "event.dragon.Earth": "Mountain Drake",
+        "event.dragon.Air": "Cloud Drake",
+        "event.dragon.Hextech": "Hextech Drake",
+        "event.dragon.Chemtech": "Chemtech Drake",
+        "event.dragon.Elder": "Elder Dragon",
+        "event.herald": "Rift Herald",
+        "event.baron": "Baron Nashor",
+        "event.stolen": "(Stolen!)",
+        "event.start": "Game Started",
+        "event.end": "Game Ended",
+        "event.win": "Victory",
+        "event.loss": "Defeat",
+        "event.minions": "Minions have spawned",
+        "unknown": "Unknown",
+        "minion": "Minion"
+      }
+    };
+
+    let currentLang = localStorage.getItem('lol-proxy-lang') || 'zh';
+
+    function t(key) {
+      return i18n[currentLang][key] || key;
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('lol-proxy-lang', lang);
+      document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+
+      // Update static elements
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = t(key);
+      });
+
+      // Re-render dynamic content if we have data
+      if (lastGameData) {
+        updateGameData(lastGameData);
+      }
+    }
+
+    function toggleLanguage() {
+      setLanguage(currentLang === 'zh' ? 'en' : 'zh');
+    }
+
     const statusBadge = document.getElementById('statusBadge');
     const statusText = document.getElementById('statusText');
     const wsStatus = document.getElementById('wsStatus');
@@ -417,18 +597,19 @@
 
     let ws;
     let reconnectTimer;
+    let lastGameData = null;
 
     function connectWebSocket() {
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
       ws = new WebSocket(`${protocol}//${location.host}/ws`);
 
       ws.onopen = () => {
-        wsStatus.textContent = '已连接 ✓';
+        wsStatus.textContent = t('ws.connected');
         wsStatus.style.color = '#22c55e';
       };
 
       ws.onclose = () => {
-        wsStatus.textContent = '已断开 (重连中...)';
+        wsStatus.textContent = t('ws.disconnected');
         wsStatus.style.color = '#ef4444';
         clearTimeout(reconnectTimer);
         reconnectTimer = setTimeout(connectWebSocket, 3000);
@@ -453,6 +634,7 @@
             break;
           case 'gameData':
             updateGameStatus(true);
+            lastGameData = msg.data;
             updateGameData(msg.data);
             break;
         }
@@ -462,12 +644,12 @@
     function updateGameStatus(running) {
       if (running) {
         statusBadge.className = 'status-badge online';
-        statusText.textContent = '游戏进行中';
+        statusText.textContent = t('status.online');
         waitingScreen.style.display = 'none';
         gameScreen.style.display = 'block';
       } else {
         statusBadge.className = 'status-badge offline';
-        statusText.textContent = '等待游戏...';
+        statusText.textContent = t('status.offline');
         waitingScreen.style.display = 'flex';
         gameScreen.style.display = 'none';
       }
@@ -494,12 +676,12 @@
         document.getElementById('activePlayer').innerHTML = `
           <div style="display: flex; gap: 24px; flex-wrap: wrap;">
             <div><strong style="color: #c9aa71;">${ap.riotIdGameName || ap.summonerName || '--'}</strong></div>
-            <div>等级: <strong>${ap.level || '--'}</strong></div>
-            <div>当前金币: <strong style="color: #f0d692;">${Math.floor(ap.currentGold || 0)}</strong></div>
-            <div>攻击力: ${Math.floor(stats.attackDamage || 0)}</div>
-            <div>法强: ${Math.floor(stats.abilityPower || 0)}</div>
-            <div>护甲: ${Math.floor(stats.armor || 0)}</div>
-            <div>魔抗: ${Math.floor(stats.magicResist || 0)}</div>
+            <div>${t('table.level')}: <strong>${ap.level || '--'}</strong></div>
+            <div>${t('player.gold')}: <strong style="color: #f0d692;">${Math.floor(ap.currentGold || 0)}</strong></div>
+            <div>${t('player.ad')}: ${Math.floor(stats.attackDamage || 0)}</div>
+            <div>${t('player.ap')}: ${Math.floor(stats.abilityPower || 0)}</div>
+            <div>${t('player.armor')}: ${Math.floor(stats.armor || 0)}</div>
+            <div>${t('player.mr')}: ${Math.floor(stats.magicResist || 0)}</div>
           </div>
         `;
       }
@@ -509,7 +691,7 @@
         const tbody = document.getElementById('playerList');
         tbody.innerHTML = data.allPlayers.map(p => {
           const teamClass = p.team === 'ORDER' ? 'team-order' : 'team-chaos';
-          const teamName = p.team === 'ORDER' ? '蓝队' : '红队';
+          const teamName = p.team === 'ORDER' ? t('team.order') : t('team.chaos');
           const scores = p.scores || {};
           return `
             <tr>
@@ -537,105 +719,103 @@
       let icon = '📌';
       let detail = '';
 
+      const killerName = e.KillerName || t('unknown');
+      const victimName = e.VictimName || t('unknown');
+
       switch (e.EventName) {
         case 'ChampionKill':
           icon = '⚔️';
-          detail = `<span class="event-killer">${e.KillerName || '未知'}</span> 击杀了 <span class="event-victim">${e.VictimName || '未知'}</span>`;
+          detail = `<span class="event-killer">${killerName}</span> ${t('event.kill')} <span class="event-victim">${victimName}</span>`;
           if (e.Assisters && e.Assisters.length > 0) {
-            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+            detail += `<br><span class="event-assist">${t('event.assist')}: ${e.Assisters.join(', ')}</span>`;
           }
           break;
 
         case 'Multikill':
           icon = '🔥';
-          const killNames = { 2: '双杀', 3: '三杀', 4: '四杀', 5: '五杀' };
-          const killName = killNames[e.KillStreak] || `${e.KillStreak}连杀`;
-          detail = `<span class="event-killer">${e.KillerName || '未知'}</span> <span class="event-multi">${killName}!</span>`;
+          const killKey = `event.multikill.${e.KillStreak}`;
+          const killName = t(killKey) !== killKey ? t(killKey) : `${e.KillStreak} ${t('event.multikill.x')}`;
+          detail = `<span class="event-killer">${killerName}</span> <span class="event-multi">${killName}!</span>`;
           break;
 
         case 'Ace':
           icon = '💀';
-          detail = `<span class="event-label">团灭!</span> <span class="event-killer">${e.Acer || '未知'}</span> 完成了团灭`;
+          detail = `<span class="event-label">${t('event.ace')}</span> <span class="event-killer">${e.Acer || t('unknown')}</span> ${t('event.ace_desc')}`;
           break;
 
         case 'FirstBlood':
           icon = '🩸';
-          detail = `<span class="event-label">第一滴血!</span> <span class="event-killer">${e.Recipient || '未知'}</span>`;
+          detail = `<span class="event-label">${t('event.firstblood')}</span> <span class="event-killer">${e.Recipient || t('unknown')}</span>`;
           break;
 
         case 'TurretKilled':
           icon = '🏰';
-          detail = `<span class="event-killer">${e.KillerName || '小兵'}</span> 摧毁了 <span class="event-label">防御塔</span>`;
+          detail = `<span class="event-killer">${killerName === 'Minion' ? t('minion') : killerName}</span> ${t('event.destroy')} <span class="event-label">${t('event.turret')}</span>`;
           if (e.Assisters && e.Assisters.length > 0) {
-            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+            detail += `<br><span class="event-assist">${t('event.assist')}: ${e.Assisters.join(', ')}</span>`;
           }
           break;
 
         case 'InhibKilled':
           icon = '💎';
-          detail = `<span class="event-killer">${e.KillerName || '小兵'}</span> 摧毁了 <span class="event-label">水晶</span>`;
+          detail = `<span class="event-killer">${killerName === 'Minion' ? t('minion') : killerName}</span> ${t('event.destroy')} <span class="event-label">${t('event.inhib')}</span>`;
           if (e.Assisters && e.Assisters.length > 0) {
-            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+            detail += `<br><span class="event-assist">${t('event.assist')}: ${e.Assisters.join(', ')}</span>`;
           }
           break;
 
         case 'InhibRespawningSoon':
           icon = '💎';
-          detail = `<span class="event-label">水晶即将重生</span>`;
+          detail = `<span class="event-label">${t('event.inhib_soon')}</span>`;
           break;
 
         case 'InhibRespawned':
           icon = '💎';
-          detail = `<span class="event-label">水晶已重生</span>`;
+          detail = `<span class="event-label">${t('event.inhib_respawn')}</span>`;
           break;
 
         case 'DragonKill':
           icon = '🐉';
-          const dragonNames = {
-            'Fire': '火龙', 'Water': '水龙', 'Earth': '土龙',
-            'Air': '风龙', 'Hextech': '海克斯龙', 'Chemtech': '化学龙',
-            'Elder': '远古巨龙'
-          };
-          const dragonName = dragonNames[e.DragonType] || e.DragonType || '巨龙';
-          detail = `<span class="event-killer">${e.KillerName || '未知'}</span> 击杀了 <span class="event-label">${dragonName}</span>`;
-          if (e.Stolen) detail += ` <span class="event-multi">(偷取!)</span>`;
+          const dragonName = t(`event.dragon.${e.DragonType}`) || e.DragonType || t('event.dragon');
+          detail = `<span class="event-killer">${killerName}</span> ${t('event.kill')} <span class="event-label">${dragonName}</span>`;
+          if (e.Stolen) detail += ` <span class="event-multi">${t('event.stolen')}</span>`;
           if (e.Assisters && e.Assisters.length > 0) {
-            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+            detail += `<br><span class="event-assist">${t('event.assist')}: ${e.Assisters.join(', ')}</span>`;
           }
           break;
 
         case 'HeraldKill':
           icon = '🦀';
-          detail = `<span class="event-killer">${e.KillerName || '未知'}</span> 击杀了 <span class="event-label">峡谷先锋</span>`;
-          if (e.Stolen) detail += ` <span class="event-multi">(偷取!)</span>`;
+          detail = `<span class="event-killer">${killerName}</span> ${t('event.kill')} <span class="event-label">${t('event.herald')}</span>`;
+          if (e.Stolen) detail += ` <span class="event-multi">${t('event.stolen')}</span>`;
           if (e.Assisters && e.Assisters.length > 0) {
-            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+            detail += `<br><span class="event-assist">${t('event.assist')}: ${e.Assisters.join(', ')}</span>`;
           }
           break;
 
         case 'BaronKill':
           icon = '👾';
-          detail = `<span class="event-killer">${e.KillerName || '未知'}</span> 击杀了 <span class="event-label">纳什男爵</span>`;
-          if (e.Stolen) detail += ` <span class="event-multi">(偷取!)</span>`;
+          detail = `<span class="event-killer">${killerName}</span> ${t('event.kill')} <span class="event-label">${t('event.baron')}</span>`;
+          if (e.Stolen) detail += ` <span class="event-multi">${t('event.stolen')}</span>`;
           if (e.Assisters && e.Assisters.length > 0) {
-            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+            detail += `<br><span class="event-assist">${t('event.assist')}: ${e.Assisters.join(', ')}</span>`;
           }
           break;
 
         case 'GameStart':
           icon = '🚀';
-          detail = `<span class="event-label">游戏开始</span>`;
+          detail = `<span class="event-label">${t('event.start')}</span>`;
           break;
 
         case 'GameEnd':
           icon = '🏆';
-          const result = e.Result === 'Win' ? '胜利' : '失败';
-          detail = `<span class="event-label">游戏结束 — ${result}</span>`;
+          const result = e.Result === 'Win' ? t('event.win') : t('event.loss');
+          detail = `<span class="event-label">${t('event.end')} — ${result}</span>`;
           break;
 
         case 'MinionsSpawning':
           icon = '🐛';
-          detail = `<span class="event-label">小兵已出发</span>`;
+          detail = `<span class="event-label">${t('event.minions')}</span>`;
           break;
 
         default:
@@ -654,7 +834,8 @@
       `;
     }
 
-    // Connect on page load
+    // Initialize Language
+    setLanguage(currentLang);
     connectWebSocket();
   </script>
 </body>

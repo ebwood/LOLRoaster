@@ -1,6 +1,6 @@
 {
   "name": "lol-proxy",
-  "version": "0.0.2",
+  "version": "0.0.1",
   "description": "LoL Live Client Data API proxy - expose game data to LAN",
   "main": "index.js",
   "bin": "index.js",
