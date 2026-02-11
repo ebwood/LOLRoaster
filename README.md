@@ -54,7 +54,7 @@ npm run build:mac
     git push origin v1.0.0
     ```
 
-推送后，GitHub Actions 会自动构建项目，并在 GitHub 仓库的 **Releases** 页面发布新版本，包含 Windows (`.exe`) 和 Mac 可执行文件供下载。
+推送后，GitHub Actions 会自动构建项目，并在 GitHub 仓库的 **Releases** 页面发布新版本，包含 Windows (`lol-proxy-win.exe`) 和 Mac (`lol-proxy-macos`) 可执行文件供下载。
 
 
 ## API 端点
