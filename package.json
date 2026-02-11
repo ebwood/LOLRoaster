@@ -1,0 +1,15 @@
+{
+  "name": "lol-proxy",
+  "version": "1.0.0",
+  "description": "LoL Live Client Data API proxy - expose game data to LAN",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "ws": "^8.18.0"
+  },
+  "type": "module"
+}

@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoL Live Client Data Proxy</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0a0e17;
+      color: #e0e6ed;
+      min-height: 100vh;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #1a1f35 0%, #0d1117 100%);
+      border-bottom: 1px solid rgba(201, 170, 113, 0.3);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #c9aa71, #f0d692);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 1px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .status-badge.online {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .status-badge.offline {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .online .status-dot { background: #22c55e; }
+    .offline .status-dot { background: #ef4444; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      background: linear-gradient(145deg, #141924, #0f1320);
+      border: 1px solid rgba(201, 170, 113, 0.12);
+      border-radius: 12px;
+      padding: 20px;
+      transition: border-color 0.3s;
+    }
+
+    .card:hover {
+      border-color: rgba(201, 170, 113, 0.3);
+    }
+
+    .card-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: #8892a4;
+      margin-bottom: 8px;
+    }
+
+    .card-value {
+      font-size: 28px;
+      font-weight: 700;
+      color: #c9aa71;
+    }
+
+    .card-value.small {
+      font-size: 18px;
+    }
+
+    .section {
+      background: linear-gradient(145deg, #141924, #0f1320);
+      border: 1px solid rgba(201, 170, 113, 0.12);
+      border-radius: 12px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .section-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(201, 170, 113, 0.1);
+      font-size: 15px;
+      font-weight: 600;
+      color: #c9aa71;
+    }
+
+    .player-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .player-table th {
+      text-align: left;
+      padding: 10px 16px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #8892a4;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+
+    .player-table td {
+      padding: 10px 16px;
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+
+    .player-table tr:hover td {
+      background: rgba(201, 170, 113, 0.04);
+    }
+
+    .team-order { color: #3b82f6; }
+    .team-chaos { color: #ef4444; }
+
+    .kda {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .events-list {
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 12px 20px;
+    }
+
+    .events-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .events-list::-webkit-scrollbar-thumb {
+      background: rgba(201, 170, 113, 0.3);
+      border-radius: 2px;
+    }
+
+    .event-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .event-time {
+      color: #8892a4;
+      font-variant-numeric: tabular-nums;
+      min-width: 50px;
+      flex-shrink: 0;
+    }
+
+    .event-icon {
+      font-size: 16px;
+      min-width: 22px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .event-detail {
+      flex: 1;
+    }
+
+    .event-killer { color: #ef4444; font-weight: 600; }
+    .event-victim { color: #3b82f6; font-weight: 600; }
+    .event-assist { color: #8892a4; font-size: 12px; }
+    .event-label { color: #c9aa71; font-weight: 600; }
+    .event-multi { color: #a855f7; font-weight: 700; font-size: 12px; }
+
+    .waiting-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+    }
+
+    .waiting-icon {
+      font-size: 64px;
+      margin-bottom: 24px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .waiting-text {
+      font-size: 20px;
+      color: #8892a4;
+      margin-bottom: 8px;
+    }
+
+    .waiting-sub {
+      font-size: 14px;
+      color: #555e6e;
+    }
+
+    .api-list {
+      padding: 16px 20px;
+    }
+
+    .api-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      font-size: 13px;
+    }
+
+    .api-method {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    .api-path {
+      font-family: 'Fira Code', 'Cascadia Code', monospace;
+      color: #a0aab8;
+    }
+
+    .api-path a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .api-path a:hover {
+      color: #c9aa71;
+    }
+
+    .ws-badge {
+      background: rgba(168, 85, 247, 0.15);
+      color: #a855f7;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: monospace;
+    }
+
+    .connection-info {
+      font-size: 12px;
+      color: #555e6e;
+      padding: 8px 32px 8px;
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>⚔️ LoL Live Client Data Proxy</h1>
+    <div id="statusBadge" class="status-badge offline">
+      <span class="status-dot"></span>
+      <span id="statusText">等待连接...</span>
+    </div>
+  </div>
+
+  <div class="connection-info">
+    WebSocket: <span id="wsStatus">连接中...</span>
+  </div>
+
+  <div class="container">
+    <!-- Waiting Screen (shown when no game) -->
+    <div id="waitingScreen" class="waiting-screen">
+      <div class="waiting-icon">🎮</div>
+      <div class="waiting-text">等待 LoL 游戏启动...</div>
+      <div class="waiting-sub">当游戏开始后，数据将自动显示在这里</div>
+
+      <div class="section" style="margin-top: 40px; width: 100%; max-width: 600px;">
+        <div class="section-header">📋 API 端点</div>
+        <div class="api-list">
+          <div class="api-item">
+            <span class="api-method">GET</span>
+            <span class="api-path"><a href="/status">/status</a></span>
+          </div>
+          <div class="api-item">
+            <span class="api-method">GET</span>
+            <span class="api-path"><a href="/liveclientdata/allgamedata">/liveclientdata/allgamedata</a></span>
+          </div>
+          <div class="api-item">
+            <span class="api-method">GET</span>
+            <span class="api-path"><a href="/liveclientdata/activeplayer">/liveclientdata/activeplayer</a></span>
+          </div>
+          <div class="api-item">
+            <span class="api-method">GET</span>
+            <span class="api-path"><a href="/liveclientdata/playerlist">/liveclientdata/playerlist</a></span>
+          </div>
+          <div class="api-item">
+            <span class="api-method">GET</span>
+            <span class="api-path"><a href="/liveclientdata/eventdata">/liveclientdata/eventdata</a></span>
+          </div>
+          <div class="api-item">
+            <span class="api-method">GET</span>
+            <span class="api-path"><a href="/liveclientdata/gamestats">/liveclientdata/gamestats</a></span>
+          </div>
+          <div class="api-item">
+            <span class="ws-badge">WS</span>
+            <span class="api-path">/ws</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Game Data Screen (shown when game is running) -->
+    <div id="gameScreen" style="display: none;">
+      <div class="grid">
+        <div class="card">
+          <div class="card-label">游戏时间</div>
+          <div class="card-value" id="gameTime">--:--</div>
+        </div>
+        <div class="card">
+          <div class="card-label">游戏模式</div>
+          <div class="card-value small" id="gameMode">--</div>
+        </div>
+        <div class="card">
+          <div class="card-label">地图</div>
+          <div class="card-value small" id="mapName">--</div>
+        </div>
+      </div>
+
+      <!-- Active Player -->
+      <div class="section">
+        <div class="section-header">🏆 当前玩家</div>
+        <div style="padding: 16px 20px;">
+          <div id="activePlayer" style="font-size: 14px; color: #a0aab8;">加载中...</div>
+        </div>
+      </div>
+
+      <!-- Player List -->
+      <div class="section">
+        <div class="section-header">👥 所有玩家</div>
+        <div style="overflow-x: auto;">
+          <table class="player-table">
+            <thead>
+              <tr>
+                <th>队伍</th>
+                <th>召唤师</th>
+                <th>英雄</th>
+                <th>等级</th>
+                <th>KDA</th>
+                <th>CS</th>
+              </tr>
+            </thead>
+            <tbody id="playerList"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Events -->
+      <div class="section">
+        <div class="section-header">📜 游戏事件</div>
+        <div class="events-list" id="eventsList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const statusBadge = document.getElementById('statusBadge');
+    const statusText = document.getElementById('statusText');
+    const wsStatus = document.getElementById('wsStatus');
+    const waitingScreen = document.getElementById('waitingScreen');
+    const gameScreen = document.getElementById('gameScreen');
+
+    let ws;
+    let reconnectTimer;
+
+    function connectWebSocket() {
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${protocol}//${location.host}/ws`);
+
+      ws.onopen = () => {
+        wsStatus.textContent = '已连接 ✓';
+        wsStatus.style.color = '#22c55e';
+      };
+
+      ws.onclose = () => {
+        wsStatus.textContent = '已断开 (重连中...)';
+        wsStatus.style.color = '#ef4444';
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connectWebSocket, 3000);
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+
+      ws.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+
+        switch (msg.type) {
+          case 'status':
+            updateGameStatus(msg.gameRunning);
+            break;
+          case 'gameStarted':
+            updateGameStatus(true);
+            break;
+          case 'gameEnded':
+            updateGameStatus(false);
+            break;
+          case 'gameData':
+            updateGameStatus(true);
+            updateGameData(msg.data);
+            break;
+        }
+      };
+    }
+
+    function updateGameStatus(running) {
+      if (running) {
+        statusBadge.className = 'status-badge online';
+        statusText.textContent = '游戏进行中';
+        waitingScreen.style.display = 'none';
+        gameScreen.style.display = 'block';
+      } else {
+        statusBadge.className = 'status-badge offline';
+        statusText.textContent = '等待游戏...';
+        waitingScreen.style.display = 'flex';
+        gameScreen.style.display = 'none';
+      }
+    }
+
+    function formatTime(seconds) {
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60);
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+
+    function updateGameData(data) {
+      // Game stats
+      if (data.gameData) {
+        document.getElementById('gameTime').textContent = formatTime(data.gameData.gameTime);
+        document.getElementById('gameMode').textContent = data.gameData.gameMode || '--';
+        document.getElementById('mapName').textContent = data.gameData.mapName || '--';
+      }
+
+      // Active player
+      if (data.activePlayer) {
+        const ap = data.activePlayer;
+        const stats = ap.championStats || {};
+        document.getElementById('activePlayer').innerHTML = `
+          <div style="display: flex; gap: 24px; flex-wrap: wrap;">
+            <div><strong style="color: #c9aa71;">${ap.riotIdGameName || ap.summonerName || '--'}</strong></div>
+            <div>等级: <strong>${ap.level || '--'}</strong></div>
+            <div>当前金币: <strong style="color: #f0d692;">${Math.floor(ap.currentGold || 0)}</strong></div>
+            <div>攻击力: ${Math.floor(stats.attackDamage || 0)}</div>
+            <div>法强: ${Math.floor(stats.abilityPower || 0)}</div>
+            <div>护甲: ${Math.floor(stats.armor || 0)}</div>
+            <div>魔抗: ${Math.floor(stats.magicResist || 0)}</div>
+          </div>
+        `;
+      }
+
+      // Player list
+      if (data.allPlayers) {
+        const tbody = document.getElementById('playerList');
+        tbody.innerHTML = data.allPlayers.map(p => {
+          const teamClass = p.team === 'ORDER' ? 'team-order' : 'team-chaos';
+          const teamName = p.team === 'ORDER' ? '蓝队' : '红队';
+          const scores = p.scores || {};
+          return `
+            <tr>
+              <td class="${teamClass}">${teamName}</td>
+              <td>${p.riotIdGameName || p.summonerName || '--'}</td>
+              <td>${p.championName || '--'}</td>
+              <td>${p.level || '--'}</td>
+              <td class="kda">${scores.kills || 0}/${scores.deaths || 0}/${scores.assists || 0}</td>
+              <td>${scores.creepScore || 0}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Events
+      if (data.events && data.events.Events) {
+        const el = document.getElementById('eventsList');
+        const events = data.events.Events.slice().reverse();
+        el.innerHTML = events.map(e => formatEvent(e)).join('');
+      }
+    }
+
+    function formatEvent(e) {
+      const time = `<span class="event-time">${formatTime(e.EventTime)}</span>`;
+      let icon = '📌';
+      let detail = '';
+
+      switch (e.EventName) {
+        case 'ChampionKill':
+          icon = '⚔️';
+          detail = `<span class="event-killer">${e.KillerName || '未知'}</span> 击杀了 <span class="event-victim">${e.VictimName || '未知'}</span>`;
+          if (e.Assisters && e.Assisters.length > 0) {
+            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+          }
+          break;
+
+        case 'Multikill':
+          icon = '🔥';
+          const killNames = { 2: '双杀', 3: '三杀', 4: '四杀', 5: '五杀' };
+          const killName = killNames[e.KillStreak] || `${e.KillStreak}连杀`;
+          detail = `<span class="event-killer">${e.KillerName || '未知'}</span> <span class="event-multi">${killName}!</span>`;
+          break;
+
+        case 'Ace':
+          icon = '💀';
+          detail = `<span class="event-label">团灭!</span> <span class="event-killer">${e.Acer || '未知'}</span> 完成了团灭`;
+          break;
+
+        case 'FirstBlood':
+          icon = '🩸';
+          detail = `<span class="event-label">第一滴血!</span> <span class="event-killer">${e.Recipient || '未知'}</span>`;
+          break;
+
+        case 'TurretKilled':
+          icon = '🏰';
+          detail = `<span class="event-killer">${e.KillerName || '小兵'}</span> 摧毁了 <span class="event-label">防御塔</span>`;
+          if (e.Assisters && e.Assisters.length > 0) {
+            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+          }
+          break;
+
+        case 'InhibKilled':
+          icon = '💎';
+          detail = `<span class="event-killer">${e.KillerName || '小兵'}</span> 摧毁了 <span class="event-label">水晶</span>`;
+          if (e.Assisters && e.Assisters.length > 0) {
+            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+          }
+          break;
+
+        case 'InhibRespawningSoon':
+          icon = '💎';
+          detail = `<span class="event-label">水晶即将重生</span>`;
+          break;
+
+        case 'InhibRespawned':
+          icon = '💎';
+          detail = `<span class="event-label">水晶已重生</span>`;
+          break;
+
+        case 'DragonKill':
+          icon = '🐉';
+          const dragonNames = {
+            'Fire': '火龙', 'Water': '水龙', 'Earth': '土龙',
+            'Air': '风龙', 'Hextech': '海克斯龙', 'Chemtech': '化学龙',
+            'Elder': '远古巨龙'
+          };
+          const dragonName = dragonNames[e.DragonType] || e.DragonType || '巨龙';
+          detail = `<span class="event-killer">${e.KillerName || '未知'}</span> 击杀了 <span class="event-label">${dragonName}</span>`;
+          if (e.Stolen) detail += ` <span class="event-multi">(偷取!)</span>`;
+          if (e.Assisters && e.Assisters.length > 0) {
+            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+          }
+          break;
+
+        case 'HeraldKill':
+          icon = '🦀';
+          detail = `<span class="event-killer">${e.KillerName || '未知'}</span> 击杀了 <span class="event-label">峡谷先锋</span>`;
+          if (e.Stolen) detail += ` <span class="event-multi">(偷取!)</span>`;
+          if (e.Assisters && e.Assisters.length > 0) {
+            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+          }
+          break;
+
+        case 'BaronKill':
+          icon = '👾';
+          detail = `<span class="event-killer">${e.KillerName || '未知'}</span> 击杀了 <span class="event-label">纳什男爵</span>`;
+          if (e.Stolen) detail += ` <span class="event-multi">(偷取!)</span>`;
+          if (e.Assisters && e.Assisters.length > 0) {
+            detail += `<br><span class="event-assist">助攻: ${e.Assisters.join(', ')}</span>`;
+          }
+          break;
+
+        case 'GameStart':
+          icon = '🚀';
+          detail = `<span class="event-label">游戏开始</span>`;
+          break;
+
+        case 'GameEnd':
+          icon = '🏆';
+          const result = e.Result === 'Win' ? '胜利' : '失败';
+          detail = `<span class="event-label">游戏结束 — ${result}</span>`;
+          break;
+
+        case 'MinionsSpawning':
+          icon = '🐛';
+          detail = `<span class="event-label">小兵已出发</span>`;
+          break;
+
+        default:
+          detail = `<span class="event-label">${e.EventName}</span>`;
+          if (e.KillerName) detail += ` — ${e.KillerName}`;
+          if (e.VictimName) detail += ` → ${e.VictimName}`;
+          break;
+      }
+
+      return `
+        <div class="event-item">
+          ${time}
+          <span class="event-icon">${icon}</span>
+          <span class="event-detail">${detail}</span>
+        </div>
+      `;
+    }
+
+    // Connect on page load
+    connectWebSocket();
+  </script>
+</body>
+</html>
