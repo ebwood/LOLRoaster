@@ -103,6 +103,9 @@ jobs:
           - os: macos-latest
             cmd: npm run electron:build:mac
             artifact: dist-electron/*.dmg
+          - os: ubuntu-latest
+            cmd: npm run electron:build:linux
+            artifact: dist-electron/*.AppImage
           - os: windows-latest
             cmd: npm run electron:build:win
             artifact: dist-electron/*.exe
@@ -167,6 +170,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: electron-windows-latest
+          path: release/
+
+      - name: Download Electron Linux
+        uses: actions/download-artifact@v4
+        with:
+          name: electron-ubuntu-latest
           path: release/
 
       - name: Create Release

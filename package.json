@@ -12,9 +12,10 @@
     "build:win": "pkg . -t node18-win-x64 --out-path dist --public",
     "build:mac": "pkg . -t node18-macos-x64 --out-path dist --public",
     "electron:dev": "electron electron/main.js",
-    "electron:build": "electron-builder --mac --win",
+    "electron:build": "electron-builder --mac --win --linux",
     "electron:build:mac": "electron-builder --mac",
-    "electron:build:win": "electron-builder --win"
+    "electron:build:win": "electron-builder --win",
+    "electron:build:linux": "electron-builder --linux"
   },
   "pkg": {
     "assets": [
@@ -50,6 +51,10 @@
     },
     "win": {
       "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage",
+      "category": "Utility"
     },
     "nsis": {
       "oneClick": true,
