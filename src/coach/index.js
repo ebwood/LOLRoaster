@@ -135,14 +135,10 @@ class Coach {
 
       // 4. Handle Events
       if (allEvents.length > 0) {
-        console.log(`[Coach] Detected ${allEvents.length} event(s):`, allEvents.map(e => e.type).join(', '));
-
-        // Prepare context for LLM
         const playerName = gameData.activePlayer.summonerName || gameData.activePlayer.riotId;
         const playerStats = gameData.allPlayers.find(p =>
           p.summonerName === playerName || p.riotId === playerName
         );
-
         const currentContext = {
           gameTime: gameData.gameData.gameTime,
           kda: playerStats
@@ -152,6 +148,8 @@ class Coach {
         };
 
         allEvents.forEach(event => {
+          console.log(`[Coach] 📡 Event: ${event.type}${event.subtype ? ` (${event.subtype})` : ''} | KDA: ${currentContext.kda} | CS: ${currentContext.cs}`);
+
           if (event.type === 'DEATH') {
             this.triggerRoast(DEATH_ROASTS, { ...currentContext, type: 'DEATH', details: `Killed by ${event.kda ? 'enemy' : 'unknown'}` });
           } else if (event.type === 'KILL') {
@@ -159,8 +157,7 @@ class Coach {
           } else if (event.type === 'CS_GAP') {
             this.triggerRoast(CS_ROASTS, { ...currentContext, type: 'CS_GAP', details: `Missed too many minions. Gap: ${event.diff}` });
           } else if (event.type === 'TEAMMATE_DEATH') {
-            // 30% chance to roast teammate death to avoid spam
-            if (Math.random() > 0.7) this.triggerRoast(TEAMMATE_DEATH_ROASTS, { ...currentContext, type: 'TEAMMATE_DEATH', details: `Teammate ${event.name} died` });
+            this.triggerRoast(TEAMMATE_DEATH_ROASTS, { ...currentContext, type: 'TEAMMATE_DEATH', details: `Teammate ${event.name} died` });
           } else if (event.type === 'OBJECTIVE') {
             const myName = playerName;
             const me = gameData.allPlayers.find(p => p.summonerName === myName || p.riotId === myName);

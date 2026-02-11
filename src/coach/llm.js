@@ -64,8 +64,6 @@ class LLMService {
         }
       ];
 
-      console.log('[LLM] Request Messages:', JSON.stringify(messages, null, 2));
-
       const response = await axios.post(
         `${this.baseUrl}/chat/completions`,
         {
