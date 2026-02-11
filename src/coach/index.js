@@ -128,8 +128,9 @@ class Coach {
       // 2. Diff Logic (Player Stats)
       const diffEvents = this.gameState.diff(gameData);
 
-      // 3. Process Global Events (Objectives)
-      const globalEvents = this.gameState.processGlobalEvents(eventsList);
+      // 3. Process Global Events (Objectives + ChampionKill)
+      const activePlayerName = gameData.activePlayer.summonerName || gameData.activePlayer.riotId;
+      const globalEvents = this.gameState.processGlobalEvents(eventsList, activePlayerName, gameData.allPlayers);
 
       const allEvents = [...diffEvents, ...globalEvents];
 
