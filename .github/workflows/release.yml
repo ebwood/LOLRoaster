@@ -7,7 +7,7 @@ on:
       - 'v*'
 
 jobs:
-  # CLI builds (pkg) - cross-compiles on Linux
+  # CLI builds (pkg) - Linux & Windows cross-compile on Ubuntu
   build-cli:
     runs-on: ubuntu-latest
     permissions:
@@ -25,14 +25,71 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build CLI executables
-        run: npm run build
+      - name: Build CLI (Linux & Windows)
+        run: |
+          npx pkg . -t node18-linux-x64 --out-path dist --public
+          npx pkg . -t node18-win-x64 --out-path dist --public
 
       - name: Upload CLI artifacts
         uses: actions/upload-artifact@v4
         with:
           name: cli-builds
           path: dist/
+
+  # CLI macOS build with code signing
+  build-cli-mac:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build CLI (macOS)
+        run: npx pkg . -t node18-macos-x64 --out-path dist --public
+
+      - name: Import signing certificate
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          echo "$CSC_LINK" | base64 --decode > cert.p12
+          security create-keychain -p actions build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p actions build.keychain
+          security import cert.p12 -k build.keychain -P "$CSC_KEY_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions build.keychain
+          rm cert.p12
+
+      - name: Sign CLI binary
+        run: |
+          codesign --force --options runtime --sign "Developer ID Application: Chenpeng Lin (F469J2Y6K4)" dist/lol-proxy-macos
+          codesign --verify --deep --strict dist/lol-proxy-macos
+
+      - name: Notarize CLI binary
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          ditto -c -k --keepParent dist/lol-proxy-macos dist/lol-proxy-macos.zip
+          xcrun notarytool submit dist/lol-proxy-macos.zip --apple-id "$APPLE_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait
+          rm dist/lol-proxy-macos.zip
+
+      - name: Upload macOS CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-mac-build
+          path: dist/lol-proxy-macos
 
   # Electron builds - must run on native OS
   build-electron:
@@ -79,7 +136,7 @@ jobs:
 
   # Create GitHub Release with all artifacts
   release:
-    needs: [build-cli, build-electron]
+    needs: [build-cli, build-cli-mac, build-electron]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -88,6 +145,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: cli-builds
+          path: release/
+
+      - name: Download CLI macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-mac-build
           path: release/
 
       - name: Download Electron macOS
