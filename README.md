@@ -88,7 +88,7 @@ Each roast uses a random theme (e.g., "disappointed parent", "suggest uninstall"
 | `GET /audio/:hash` | Serve cached TTS audio |
 | `WS /ws` | WebSocket real-time push |
 
-## Package as Executable
+## Package as CLI Executable
 
 ```bash
 # Build for both Windows and Mac
@@ -101,16 +101,40 @@ npm run build:win
 npm run build:mac
 ```
 
-Output in `dist/` directory.
+Output in `dist/` directory. Users can run the executable directly without Node.js.
 
-## 🚀 Automated Release (GitHub Actions)
+## �️ Desktop App (Electron)
+
+Package as a desktop application with system tray and built-in browser window:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+# Development
+npm run electron:dev
+
+# Build for Mac (.dmg)
+npm run electron:build:mac
+
+# Build for Windows (.exe installer)
+npm run electron:build:win
+
+# Build for both
+npm run electron:build
 ```
 
-GitHub Actions will automatically build and publish executables on the Releases page.
+Output in `dist-electron/` directory.
+
+## �🚀 Automated Release (GitHub Actions)
+
+```bash
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+Pushing a tag triggers GitHub Actions to automatically build:
+- **CLI**: `lol-proxy-win.exe` + `lol-proxy-macos` (via pkg)
+- **Desktop**: `.dmg` (macOS) + `.exe` installer (Windows) (via electron-builder)
+
+All artifacts are published on the GitHub Releases page.
 
 ## How It Works
 

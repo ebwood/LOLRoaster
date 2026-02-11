@@ -88,7 +88,7 @@ ELEVENLABS_VOICE_ID=5mZxJZhSmJTjL7GoYfYI  # Karo Yang (中文)
 | `GET /audio/:hash` | 获取缓存语音 |
 | `WS /ws` | WebSocket 实时推送 |
 
-## 打包为可执行文件
+## 打包为 CLI 可执行文件
 
 ```bash
 # 同时生成 Windows 和 Mac 版本
@@ -101,16 +101,40 @@ npm run build:win
 npm run build:mac
 ```
 
-输出文件在 `dist/` 目录。
+输出文件在 `dist/` 目录，用户无需安装 Node.js 即可直接运行。
+
+## 🖥️ 桌面应用 (Electron)
+
+打包为带系统托盘的桌面应用，内嵌浏览器窗口：
+
+```bash
+# 开发模式
+npm run electron:dev
+
+# 打包 Mac (.dmg)
+npm run electron:build:mac
+
+# 打包 Windows (.exe 安装包)
+npm run electron:build:win
+
+# 同时打包
+npm run electron:build
+```
+
+输出文件在 `dist-electron/` 目录。
 
 ## 🚀 自动发布 (GitHub Actions)
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
-推送 tag 后，GitHub Actions 会自动构建并发布到 Releases 页面。
+推送 tag 后，GitHub Actions 会自动构建：
+- **CLI**: `lol-proxy-win.exe` + `lol-proxy-macos` (via pkg)
+- **桌面应用**: `.dmg` (macOS) + `.exe` 安装包 (Windows) (via electron-builder)
+
+所有产物发布到 GitHub Releases 页面。
 
 ## 运行原理
 

@@ -6,7 +6,8 @@ on:
       - 'v*'
 
 jobs:
-  build-and-release:
+  # CLI builds (pkg) - cross-compiles on Linux
+  build-cli:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -23,14 +24,80 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build executables
+      - name: Build CLI executables
         run: npm run build
+
+      - name: Upload CLI artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-builds
+          path: dist/
+
+  # Electron builds - must run on native OS
+  build-electron:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            cmd: npm run electron:build:mac
+            artifact: dist-electron/*.dmg
+          - os: windows-latest
+            cmd: npm run electron:build:win
+            artifact: dist-electron/*.exe
+
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app
+        run: ${{ matrix.cmd }}
+
+      - name: Upload Electron artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-${{ matrix.os }}
+          path: ${{ matrix.artifact }}
+
+  # Create GitHub Release with all artifacts
+  release:
+    needs: [build-cli, build-electron]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download CLI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-builds
+          path: release/
+
+      - name: Download Electron macOS
+        uses: actions/download-artifact@v4
+        with:
+          name: electron-macos-latest
+          path: release/
+
+      - name: Download Electron Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: electron-windows-latest
+          path: release/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: |
-            dist/lol-proxy-win.exe
-            dist/lol-proxy-macos
+          files: release/*
           generate_release_notes: true

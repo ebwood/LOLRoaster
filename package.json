@@ -1,6 +1,6 @@
 {
   "name": "lol-proxy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "LoL Live Client Data API proxy - expose game data to LAN",
   "main": "index.js",
   "bin": "index.js",
@@ -9,7 +9,11 @@
     "dev": "node --watch src/index.js",
     "build": "pkg . --out-path dist --public",
     "build:win": "pkg . -t node18-win-x64 --out-path dist --public",
-    "build:mac": "pkg . -t node18-macos-x64 --out-path dist --public"
+    "build:mac": "pkg . -t node18-macos-x64 --out-path dist --public",
+    "electron:dev": "electron electron/main.js",
+    "electron:build": "electron-builder --mac --win",
+    "electron:build:mac": "electron-builder --mac",
+    "electron:build:win": "electron-builder --win"
   },
   "pkg": {
     "assets": [
@@ -21,6 +25,31 @@
       "node18-macos-x64"
     ]
   },
+  "build": {
+    "appId": "com.ebwood.lol-proxy",
+    "productName": "LoL Proxy",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "src/**/*",
+      "public/**/*",
+      "electron/**/*",
+      "index.js",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "target": "dmg",
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": true,
+      "allowToChangeInstallationDirectory": false
+    }
+  },
   "dependencies": {
     "axios": "^1.13.5",
     "chalk": "^4.1.2",
@@ -31,6 +60,8 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
+    "electron": "^40.3.0",
+    "electron-builder": "^26.7.0",
     "pkg": "^5.8.1"
   }
 }
