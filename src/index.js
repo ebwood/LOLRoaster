@@ -39,14 +39,25 @@ async function main() {
   // 3. Create HTTP server
   const server = http.createServer(app);
 
-  // Debug Endpoint for AI Coach
-  app.post('/debug/roast', (req, res) => {
-    try {
-      coach.triggerRoast();
-      res.json({ status: 'ok', message: 'Roast triggered' });
-    } catch (e) {
-      res.status(500).json({ status: 'error', message: e.message });
-    }
+  // Debug Endpoint for AI Coach (Only in Dev Mode)
+  if (!process.pkg) {
+    app.post('/debug/roast', (req, res) => {
+      try {
+        coach.triggerRoast();
+        res.json({ status: 'ok', message: 'Roast triggered' });
+      } catch (e) {
+        res.status(500).json({ status: 'error', message: e.message });
+      }
+    });
+  }
+
+  // App Info Endpoint
+  app.get('/app-info', (req, res) => {
+    res.json({
+      version: require('../package.json').version,
+      isPackaged: !!process.pkg,
+      debugEnabled: !process.pkg
+    });
   });
 
   // 4. Attach WebSocket service

@@ -359,7 +359,7 @@
       <div class="waiting-text" data-i18n="waiting.title">等待 LoL 游戏启动...</div>
       <div class="waiting-sub" data-i18n="waiting.desc">当游戏开始后，数据将自动显示在这里</div>
 
-      <div class="section" style="margin-top: 40px; width: 100%; max-width: 600px;">
+      <div id="debug-section" class="section" style="margin-top: 40px; width: 100%; max-width: 600px; display: none;">
         <div class="section-header">🧪 Debug</div>
         <div style="padding: 20px; text-align: center;">
           <button class="debug-btn" onclick="triggerDebugRoast()">💀 模拟死亡 (触发嘲讽)</button>
@@ -864,6 +864,16 @@
         .then(data => console.log('Debug Roast:', data))
         .catch(err => console.error('Debug Roast Error:', err));
     }
+
+    // Check App Info (Debug Mode)
+    fetch('/app-info')
+      .then(res => res.json())
+      .then(info => {
+        if (info.debugEnabled) {
+          document.getElementById('debug-section').style.display = 'block';
+        }
+      })
+      .catch(console.error);
 
     // Connect on page load
     setLanguage(currentLang);
