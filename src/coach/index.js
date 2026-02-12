@@ -145,7 +145,9 @@ class Coach {
           kda: playerStats
             ? `${playerStats.scores.kills}/${playerStats.scores.deaths}/${playerStats.scores.assists}`
             : '0/0/0',
-          cs: playerStats ? playerStats.scores.creepScore : 0
+          cs: playerStats ? playerStats.scores.creepScore : 0,
+          champion: playerStats ? playerStats.championName : 'Unknown',
+          position: playerStats ? (playerStats.position || '') : ''
         };
 
         allEvents.forEach(event => {

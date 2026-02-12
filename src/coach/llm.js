@@ -62,6 +62,7 @@ class LLMService {
         {
           role: "user",
           content: `Event: ${context.event}
+Champion: ${context.champion || 'Unknown'}
 Stats: KDA ${context.kda}, CS ${context.cs}
 Time: ${Math.floor(context.gameTime / 60)}min
 Context: ${context.details || 'Played poorly'}
