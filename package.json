@@ -1,6 +1,6 @@
 {
   "name": "lol-proxy",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "LoL Live Client Data API proxy - expose game data to LAN",
   "author": "ebwood",
   "main": "electron/main.js",
@@ -44,7 +44,10 @@
     "mac": {
       "target": {
         "target": "dmg",
-        "arch": ["arm64", "x64"]
+        "arch": [
+          "arm64",
+          "x64"
+        ]
       },
       "category": "public.app-category.utilities",
       "hardenedRuntime": true,

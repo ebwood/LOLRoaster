@@ -74,7 +74,7 @@ async function main() {
     res.json({
       version: require('../package.json').version,
       isPackaged: !!process.pkg,
-      debugEnabled: !process.pkg,
+      debugEnabled: process.env.DEBUG === 'true',
       ttsProvider: config.tts.provider || 'edge'
     });
   });

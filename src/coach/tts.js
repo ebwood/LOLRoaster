@@ -43,6 +43,9 @@ class TTS extends EventEmitter {
     this.provider = config.tts.provider || 'edge';
     this.elevenlabsApiKey = config.tts.elevenlabs.apiKey;
     this.elevenlabsVoiceId = config.tts.elevenlabs.voiceId;
+    this.volcengineAppId = config.tts.volcengine.appId;
+    this.volcengineAccessToken = config.tts.volcengine.accessToken;
+    this.volcengineVoiceType = config.tts.volcengine.voiceType;
     logger.tts(`Config reloaded → Provider: ${this.provider}`);
   }
 
@@ -86,7 +89,10 @@ class TTS extends EventEmitter {
   }
 
   getHash(text) {
-    const prefix = this.provider === 'elevenlabs' ? `el:${this.elevenlabsVoiceId}` : `edge:${this.voice}`;
+    let prefix;
+    if (this.provider === 'elevenlabs') prefix = `el:${this.elevenlabsVoiceId}`;
+    else if (this.provider === 'volcengine') prefix = `vc:${config.tts.volcengine.voiceType}`;
+    else prefix = `edge:${this.voice}`;
     return crypto.createHash('md5').update(`${prefix}:${text}`).digest('hex');
   }
 
@@ -113,6 +119,8 @@ class TTS extends EventEmitter {
   async generateFile(text, filePath) {
     if (this.provider === 'elevenlabs') {
       await this.generateElevenLabs(text, filePath);
+    } else if (this.provider === 'volcengine') {
+      await this.generateVolcengine(text, filePath);
     } else {
       await this.generateEdge(text, filePath);
     }
@@ -157,6 +165,63 @@ class TTS extends EventEmitter {
       logger.error(`ElevenLabs TTS Error: ${error.message}`);
       if (error.response) {
         logger.error(`ElevenLabs Response: ${Buffer.from(error.response.data).toString()}`);
+      }
+      throw error;
+    }
+  }
+
+  // --- Volcengine (豆包) TTS ---
+  async generateVolcengine(text, filePath) {
+    try {
+      const appId = config.tts.volcengine.appId;
+      const token = config.tts.volcengine.accessToken;
+      const voiceType = config.tts.volcengine.voiceType;
+
+      if (!appId || !token) {
+        throw new Error('Volcengine AppID or Access Token not configured');
+      }
+
+      const response = await axios.post(
+        'https://openspeech.bytedance.com/api/v1/tts',
+        {
+          app: {
+            appid: appId,
+            token: token,
+            cluster: 'volcano_tts'
+          },
+          user: {
+            uid: 'lol-proxy-user'
+          },
+          audio: {
+            voice_type: voiceType,
+            encoding: 'mp3',
+            speed_ratio: 1.0
+          },
+          request: {
+            reqid: crypto.randomUUID(),
+            text: text,
+            operation: 'query'
+          }
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer;${token}`
+          },
+          timeout: 30000
+        }
+      );
+
+      if (response.data && response.data.data) {
+        const audioBuffer = Buffer.from(response.data.data, 'base64');
+        fs.writeFileSync(filePath, audioBuffer);
+      } else {
+        throw new Error(`Volcengine TTS returned no audio data: ${JSON.stringify(response.data)}`);
+      }
+    } catch (error) {
+      logger.error(`Volcengine TTS Error: ${error.message}`);
+      if (error.response) {
+        logger.error(`Volcengine Response: ${JSON.stringify(error.response.data)}`);
       }
       throw error;
     }

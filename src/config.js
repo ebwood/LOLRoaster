@@ -104,6 +104,11 @@ function buildConfig(userConfig = {}) {
       elevenlabs: {
         apiKey: userConfig.elevenlabsApiKey || process.env.ELEVENLABS_API_KEY || '',
         voiceId: userConfig.elevenlabsVoiceId || process.env.ELEVENLABS_VOICE_ID || '5mZxJZhSmJTjL7GoYfYI',
+      },
+      volcengine: {
+        appId: userConfig.volcengineAppId || process.env.VOLCENGINE_APP_ID || '',
+        accessToken: userConfig.volcengineAccessToken || process.env.VOLCENGINE_ACCESS_TOKEN || '',
+        voiceType: userConfig.volcengineVoiceType || process.env.VOLCENGINE_VOICE_TYPE || 'BV001_streaming',
       }
     }
   };
@@ -135,6 +140,9 @@ function updateConfig(settings) {
   if (settings.ttsCache !== undefined) clean.ttsCache = settings.ttsCache;
   if (settings.elevenlabsApiKey) clean.elevenlabsApiKey = settings.elevenlabsApiKey;
   if (settings.elevenlabsVoiceId) clean.elevenlabsVoiceId = settings.elevenlabsVoiceId;
+  if (settings.volcengineAppId) clean.volcengineAppId = settings.volcengineAppId;
+  if (settings.volcengineAccessToken) clean.volcengineAccessToken = settings.volcengineAccessToken;
+  if (settings.volcengineVoiceType) clean.volcengineVoiceType = settings.volcengineVoiceType;
 
   userConfig = { ...userConfig, ...clean };
   saveUserConfig(userConfig);
@@ -163,6 +171,9 @@ function getSettingsForUI() {
     ttsCache: config.tts.cache,
     elevenlabsApiKey: mask(config.tts.elevenlabs.apiKey),
     elevenlabsVoiceId: config.tts.elevenlabs.voiceId,
+    volcengineAppId: config.tts.volcengine.appId,
+    volcengineAccessToken: mask(config.tts.volcengine.accessToken),
+    volcengineVoiceType: config.tts.volcengine.voiceType,
     llmProviders: LLM_PROVIDERS,
   };
 }

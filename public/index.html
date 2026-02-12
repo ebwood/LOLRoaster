@@ -883,6 +883,7 @@
           <select id="sTtsProvider">
             <option value="edge">Edge TTS (Free)</option>
             <option value="elevenlabs">ElevenLabs (Premium)</option>
+            <option value="volcengine">豆包 Volcengine</option>
           </select>
         </div>
         <div class="settings-field settings-toggle">
@@ -906,6 +907,31 @@
             <label>Voice ID</label>
             <input id="sElevenlabsVoiceId" placeholder="5mZxJZhSmJTjL7GoYfYI">
             <div class="hint">Browse voices: elevenlabs.io/voice-library</div>
+          </div>
+        </div>
+        <div id="volcengineSettings">
+          <div class="settings-field">
+            <label>App ID</label>
+            <input id="sVolcengineAppId" placeholder="Enter App ID">
+          </div>
+          <div class="settings-field">
+            <label>Access Token</label>
+            <input id="sVolcengineAccessToken" type="password" placeholder="Enter Access Token">
+            <div class="hint">Leave empty to keep current token unchanged</div>
+          </div>
+          <div class="settings-field">
+            <label>Voice Type</label>
+            <select id="sVolcengineVoiceType">
+              <option value="BV001_streaming">通用女声</option>
+              <option value="BV002_streaming">通用男声</option>
+              <option value="BV406_streaming">元气女声</option>
+              <option value="BV407_streaming">甜美女声</option>
+              <option value="BV051_streaming">知性女声</option>
+              <option value="BV102_streaming">儒雅男声</option>
+              <option value="BV700_streaming">灿灿（沉稳男声）</option>
+              <option value="BV701_streaming">擎苍（磁性男声）</option>
+              <option value="BV123_streaming">阳光男声</option>
+            </select>
           </div>
         </div>
       </div>
@@ -1101,6 +1127,10 @@
           document.getElementById('sElevenlabsApiKey').value = '';
           document.getElementById('sElevenlabsApiKey').placeholder = data.elevenlabsApiKey ? `Already set (${data.elevenlabsApiKey})` : 'Enter API key';
           document.getElementById('sElevenlabsVoiceId').value = data.elevenlabsVoiceId || '';
+          document.getElementById('sVolcengineAppId').value = data.volcengineAppId || '';
+          document.getElementById('sVolcengineAccessToken').value = '';
+          document.getElementById('sVolcengineAccessToken').placeholder = data.volcengineAccessToken ? `Already set (${data.volcengineAccessToken})` : 'Enter Access Token';
+          document.getElementById('sVolcengineVoiceType').value = data.volcengineVoiceType || 'BV001_streaming';
           onLlmProviderChange(false);
           toggleLlmFields();
           toggleElevenlabsFields();
@@ -1149,8 +1179,9 @@
     }
 
     function toggleElevenlabsFields() {
-      const show = document.getElementById('sTtsProvider').value === 'elevenlabs';
-      document.getElementById('elevenlabsSettings').style.display = show ? 'block' : 'none';
+      const provider = document.getElementById('sTtsProvider').value;
+      document.getElementById('elevenlabsSettings').style.display = provider === 'elevenlabs' ? 'block' : 'none';
+      document.getElementById('volcengineSettings').style.display = provider === 'volcengine' ? 'block' : 'none';
     }
 
     function clearTtsCache() {
@@ -1191,6 +1222,12 @@
       if (elKey) body.elevenlabsApiKey = elKey;
       const voiceId = document.getElementById('sElevenlabsVoiceId').value.trim();
       if (voiceId) body.elevenlabsVoiceId = voiceId;
+      const vcAppId = document.getElementById('sVolcengineAppId').value.trim();
+      if (vcAppId) body.volcengineAppId = vcAppId;
+      const vcToken = document.getElementById('sVolcengineAccessToken').value.trim();
+      if (vcToken) body.volcengineAccessToken = vcToken;
+      const vcVoice = document.getElementById('sVolcengineVoiceType').value.trim();
+      if (vcVoice) body.volcengineVoiceType = vcVoice;
 
       fetch('/settings', {
         method: 'POST',
