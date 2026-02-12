@@ -109,6 +109,10 @@ function buildConfig(userConfig = {}) {
         appId: userConfig.volcengineAppId || process.env.VOLCENGINE_APP_ID || '',
         accessToken: userConfig.volcengineAccessToken || process.env.VOLCENGINE_ACCESS_TOKEN || '',
         voiceType: userConfig.volcengineVoiceType || process.env.VOLCENGINE_VOICE_TYPE || 'BV001_streaming',
+      },
+      fish: {
+        apiKey: userConfig.fishApiKey || process.env.FISH_API_KEY || '',
+        referenceId: userConfig.fishReferenceId || process.env.FISH_REFERENCE_ID || '',
       }
     }
   };
@@ -143,6 +147,8 @@ function updateConfig(settings) {
   if (settings.volcengineAppId) clean.volcengineAppId = settings.volcengineAppId;
   if (settings.volcengineAccessToken) clean.volcengineAccessToken = settings.volcengineAccessToken;
   if (settings.volcengineVoiceType) clean.volcengineVoiceType = settings.volcengineVoiceType;
+  if (settings.fishApiKey) clean.fishApiKey = settings.fishApiKey;
+  if (settings.fishReferenceId) clean.fishReferenceId = settings.fishReferenceId;
 
   userConfig = { ...userConfig, ...clean };
   saveUserConfig(userConfig);
@@ -174,6 +180,8 @@ function getSettingsForUI() {
     volcengineAppId: config.tts.volcengine.appId,
     volcengineAccessToken: mask(config.tts.volcengine.accessToken),
     volcengineVoiceType: config.tts.volcengine.voiceType,
+    fishApiKey: mask(config.tts.fish.apiKey),
+    fishReferenceId: config.tts.fish.referenceId,
     llmProviders: LLM_PROVIDERS,
   };
 }

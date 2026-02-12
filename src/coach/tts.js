@@ -46,6 +46,8 @@ class TTS extends EventEmitter {
     this.volcengineAppId = config.tts.volcengine.appId;
     this.volcengineAccessToken = config.tts.volcengine.accessToken;
     this.volcengineVoiceType = config.tts.volcengine.voiceType;
+    this.fishApiKey = config.tts.fish.apiKey;
+    this.fishReferenceId = config.tts.fish.referenceId;
     logger.tts(`Config reloaded → Provider: ${this.provider}`);
   }
 
@@ -92,6 +94,7 @@ class TTS extends EventEmitter {
     let prefix;
     if (this.provider === 'elevenlabs') prefix = `el:${this.elevenlabsVoiceId}`;
     else if (this.provider === 'volcengine') prefix = `vc:${config.tts.volcengine.voiceType}`;
+    else if (this.provider === 'fish') prefix = `fish:${config.tts.fish.referenceId}`;
     else prefix = `edge:${this.voice}`;
     return crypto.createHash('md5').update(`${prefix}:${text}`).digest('hex');
   }
@@ -121,6 +124,8 @@ class TTS extends EventEmitter {
       await this.generateElevenLabs(text, filePath);
     } else if (this.provider === 'volcengine') {
       await this.generateVolcengine(text, filePath);
+    } else if (this.provider === 'fish') {
+      await this.generateFish(text, filePath);
     } else {
       await this.generateEdge(text, filePath);
     }
@@ -222,6 +227,43 @@ class TTS extends EventEmitter {
       logger.error(`Volcengine TTS Error: ${error.message}`);
       if (error.response) {
         logger.error(`Volcengine Response: ${JSON.stringify(error.response.data)}`);
+      }
+      throw error;
+    }
+  }
+
+  // --- Fish Audio TTS ---
+  async generateFish(text, filePath) {
+    try {
+      const apiKey = config.tts.fish.apiKey;
+      const referenceId = config.tts.fish.referenceId;
+
+      if (!apiKey) {
+        throw new Error('Fish Audio API Key not configured');
+      }
+
+      const body = { text, format: 'mp3' };
+      if (referenceId) body.reference_id = referenceId;
+
+      const response = await axios.post(
+        'https://api.fish.audio/v1/tts',
+        body,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'model': 's1'
+          },
+          responseType: 'arraybuffer',
+          timeout: 30000
+        }
+      );
+
+      fs.writeFileSync(filePath, Buffer.from(response.data));
+    } catch (error) {
+      logger.error(`Fish Audio TTS Error: ${error.message}`);
+      if (error.response) {
+        logger.error(`Fish Audio Response: ${Buffer.from(error.response.data).toString()}`);
       }
       throw error;
     }

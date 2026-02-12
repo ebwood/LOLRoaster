@@ -884,6 +884,7 @@
             <option value="edge">Edge TTS (Free)</option>
             <option value="elevenlabs">ElevenLabs (Premium)</option>
             <option value="volcengine">豆包 Volcengine</option>
+            <option value="fish">Fish Audio (名人音色)</option>
           </select>
         </div>
         <div class="settings-field settings-toggle">
@@ -932,6 +933,18 @@
               <option value="BV701_streaming">擎苍（磁性男声）</option>
               <option value="BV123_streaming">阳光男声</option>
             </select>
+          </div>
+        </div>
+        <div id="fishSettings">
+          <div class="settings-field">
+            <label>Fish Audio API Key</label>
+            <input id="sFishApiKey" type="password" placeholder="Enter Fish Audio API key">
+            <div class="hint">Get one at <a href="https://fish.audio" target="_blank" style="color: #58a6ff;">fish.audio</a></div>
+          </div>
+          <div class="settings-field">
+            <label>Voice Model ID</label>
+            <input id="sFishReferenceId" placeholder="Enter voice model ID">
+            <div class="hint">Browse voices: <a href="https://fish.audio/discover" target="_blank" style="color: #58a6ff;">fish.audio/discover</a></div>
           </div>
         </div>
       </div>
@@ -1131,6 +1144,9 @@
           document.getElementById('sVolcengineAccessToken').value = '';
           document.getElementById('sVolcengineAccessToken').placeholder = data.volcengineAccessToken ? `Already set (${data.volcengineAccessToken})` : 'Enter Access Token';
           document.getElementById('sVolcengineVoiceType').value = data.volcengineVoiceType || 'BV001_streaming';
+          document.getElementById('sFishApiKey').value = '';
+          document.getElementById('sFishApiKey').placeholder = data.fishApiKey ? `Already set (${data.fishApiKey})` : 'Enter API key';
+          document.getElementById('sFishReferenceId').value = data.fishReferenceId || '';
           onLlmProviderChange(false);
           toggleLlmFields();
           toggleElevenlabsFields();
@@ -1182,6 +1198,7 @@
       const provider = document.getElementById('sTtsProvider').value;
       document.getElementById('elevenlabsSettings').style.display = provider === 'elevenlabs' ? 'block' : 'none';
       document.getElementById('volcengineSettings').style.display = provider === 'volcengine' ? 'block' : 'none';
+      document.getElementById('fishSettings').style.display = provider === 'fish' ? 'block' : 'none';
     }
 
     function clearTtsCache() {
@@ -1228,6 +1245,10 @@
       if (vcToken) body.volcengineAccessToken = vcToken;
       const vcVoice = document.getElementById('sVolcengineVoiceType').value.trim();
       if (vcVoice) body.volcengineVoiceType = vcVoice;
+      const fishKey = document.getElementById('sFishApiKey').value.trim();
+      if (fishKey) body.fishApiKey = fishKey;
+      const fishRef = document.getElementById('sFishReferenceId').value.trim();
+      if (fishRef) body.fishReferenceId = fishRef;
 
       fetch('/settings', {
         method: 'POST',

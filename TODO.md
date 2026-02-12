@@ -44,3 +44,12 @@
 - [ ] 游戏结束时生成 AI 总结报告
 - [ ] 综合点评全场表现（高光 + 失误）
 - [ ] 前端展示对局回顾卡片
+
+## 🎮 Dota 2 支持（优先级：低）
+
+- [ ] 接入 Dota 2 Game State Integration (GSI)
+  - [ ] 启动 HTTP 服务器接收游戏推送数据（webhook 模式，与 LoL 的 polling 相反）
+  - [ ] 在 `cfg/gamestate_integration/` 放配置文件
+- [ ] 适配 GameState diff 逻辑（击杀、死亡、补刀等事件）
+- [ ] 复用现有 LLM + TTS 管线
+- [ ] UI 增加游戏选择（LoL / Dota 2）
