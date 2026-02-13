@@ -71,7 +71,7 @@ Roast them now.`
       ];
 
       const response = await axios.post(
-        `${this.baseUrl} / chat / completions`,
+        `${this.baseUrl}/chat/completions`,
         {
           model: this.model,
           messages: messages,

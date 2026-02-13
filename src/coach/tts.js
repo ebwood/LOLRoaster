@@ -279,13 +279,6 @@ class TTS extends EventEmitter {
   }
 
   async speak(text) {
-    if (this.isPlaying) {
-      this.queue.push(text);
-      return;
-    }
-
-    this.isPlaying = true;
-
     try {
       const hash = this.getHash(text);
       let filePath = this.getFilePath(hash);
@@ -308,31 +301,12 @@ class TTS extends EventEmitter {
       this.history.unshift(entry);
       if (this.history.length > 20) this.history.pop(); // Keep last 20
 
-      // Play locally on the machine
-      this.currentProcess = player.play(filePath, (err) => {
-        this.currentProcess = null;
-        if (err && !err.killed) {
-          logger.error('Playback error:', err.message);
-        }
-
-        // Process queue after playback finishes
-        this.isPlaying = false;
-        if (this.queue.length > 0) {
-          const nextText = this.queue.shift();
-          this.speak(nextText);
-        }
-      });
-
-      // Also relay to browser UI
+      // Play locally on the machine (disabled)
+      // Relay to browser UI for playback
       this.emit('audioReady', { text, hash, url: `/audio/${hash}` });
 
     } catch (e) {
       logger.error('TTS Generation Error:', e.message || e);
-      this.isPlaying = false;
-      if (this.queue.length > 0) {
-        const nextText = this.queue.shift();
-        this.speak(nextText);
-      }
     }
   }
 }
