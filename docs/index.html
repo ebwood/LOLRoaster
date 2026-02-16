@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LoL Roaster — AI Toxic Coach for League of Legends</title>
+  <meta name="description" content="An AI-powered toxic coach that roasts you in real-time when you die in League of Legends. Free, open-source, with TTS voice and web dashboard.">
+  <meta property="og:title" content="LoL Roaster — AI Toxic Coach">
+  <meta property="og:description" content="Get roasted in real-time when you die in League of Legends. AI-powered toxic coaching with TTS voice.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ebwood.github.io/LOLRoaster">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg-primary: #0a0e17;
+      --bg-secondary: #111827;
+      --bg-card: rgba(17, 24, 39, 0.7);
+      --border-card: rgba(255, 255, 255, 0.06);
+      --text-primary: #f0f6fc;
+      --text-secondary: #8b949e;
+      --text-muted: #484f58;
+      --accent-gold: #c89b3c;
+      --accent-blue: #0ea5e9;
+      --accent-purple: #a855f7;
+      --accent-red: #ef4444;
+      --accent-green: #22c55e;
+      --accent-orange: #f97316;
+      --gradient-hero: linear-gradient(135deg, #c89b3c 0%, #f0e6d2 50%, #c89b3c 100%);
+      --gradient-fire: linear-gradient(135deg, #ef4444 0%, #f97316 50%, #eab308 100%);
+      --gradient-card: linear-gradient(135deg, rgba(200, 155, 60, 0.1) 0%, rgba(168, 85, 247, 0.05) 100%);
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background effects */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(200, 155, 60, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(14, 165, 233, 0.04) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    section, header, footer {
+      position: relative;
+      z-index: 1;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ========== Nav ========== */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 16px 0;
+      background: rgba(10, 14, 23, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-card);
+      transition: all 0.3s ease;
+    }
+
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.2rem;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .nav-brand span {
+      background: var(--gradient-hero);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .btn-github-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .btn-github-nav:hover {
+      background: rgba(255, 255, 255, 0.14);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* ========== Hero ========== */
+    .hero {
+      padding: 180px 0 120px;
+      text-align: center;
+      position: relative;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(200, 155, 60, 0.12);
+      border: 1px solid rgba(200, 155, 60, 0.25);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      color: var(--accent-gold);
+      margin-bottom: 32px;
+      font-weight: 500;
+    }
+
+    .hero h1 {
+      font-size: clamp(3rem, 7vw, 5.5rem);
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 .gradient-text {
+      background: var(--gradient-fire);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin: 0 auto 48px;
+      line-height: 1.7;
+    }
+
+    .hero-buttons {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 28px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--gradient-fire);
+      color: #fff;
+      box-shadow: 0 4px 24px rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(239, 68, 68, 0.4);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-primary);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+    }
+
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-top: 64px;
+      padding-top: 48px;
+      border-top: 1px solid var(--border-card);
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 800;
+      background: var(--gradient-hero);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* ========== Features ========== */
+    .features {
+      padding: 100px 0;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    .section-tag {
+      display: inline-block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent-gold);
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .section-desc {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 32px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--gradient-fire);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(200, 155, 60, 0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .feature-card:hover::before {
+      opacity: 1;
+    }
+
+    .feature-icon {
+      font-size: 2rem;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    /* ========== Coach Showcase ========== */
+    .coach-section {
+      padding: 100px 0;
+      position: relative;
+    }
+
+    .coach-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+    }
+
+    .coach-left h2 {
+      font-size: clamp(2rem, 4vw, 2.8rem);
+      font-weight: 800;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+    }
+
+    .coach-left p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      line-height: 1.7;
+      margin-bottom: 32px;
+    }
+
+    .trigger-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .trigger-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border-card);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+    }
+
+    .trigger-item:hover {
+      background: rgba(200, 155, 60, 0.06);
+      border-color: rgba(200, 155, 60, 0.15);
+    }
+
+    .trigger-emoji {
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    .trigger-text {
+      flex: 1;
+    }
+
+    .trigger-text strong {
+      color: var(--text-primary);
+    }
+
+    .trigger-text span {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+
+    .coach-terminal {
+      background: #0d1117;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .terminal-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .terminal-dot.red { background: #ff5f57; }
+    .terminal-dot.yellow { background: #febc2e; }
+    .terminal-dot.green { background: #28c840; }
+
+    .terminal-title {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-left: 8px;
+      font-family: var(--font-mono);
+    }
+
+    .terminal-body {
+      padding: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      line-height: 1.8;
+    }
+
+    .terminal-line {
+      opacity: 0;
+      animation: typeLine 0.4s ease forwards;
+    }
+
+    .terminal-line:nth-child(1) { animation-delay: 0.2s; }
+    .terminal-line:nth-child(2) { animation-delay: 0.8s; }
+    .terminal-line:nth-child(3) { animation-delay: 1.5s; }
+    .terminal-line:nth-child(4) { animation-delay: 2.2s; }
+    .terminal-line:nth-child(5) { animation-delay: 2.9s; }
+    .terminal-line:nth-child(6) { animation-delay: 3.6s; }
+    .terminal-line:nth-child(7) { animation-delay: 4.3s; }
+
+    @keyframes typeLine {
+      from { opacity: 0; transform: translateX(-8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+
+    .t-gray { color: #6e7681; }
+    .t-green { color: #3fb950; }
+    .t-yellow { color: #d29922; }
+    .t-red { color: #f85149; }
+    .t-blue { color: #58a6ff; }
+    .t-purple { color: #bc8cff; }
+    .t-gold { color: #c89b3c; }
+
+    /* ========== TTS ========== */
+    .tts-section {
+      padding: 100px 0;
+    }
+
+    .tts-providers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 48px;
+    }
+
+    .tts-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 36px;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .tts-card:hover {
+      border-color: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .tts-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .tts-badge.free {
+      background: rgba(34, 197, 94, 0.12);
+      color: var(--accent-green);
+    }
+
+    .tts-badge.premium {
+      background: rgba(200, 155, 60, 0.12);
+      color: var(--accent-gold);
+    }
+
+    .tts-card h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .tts-card p {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      margin-bottom: 20px;
+    }
+
+    .tts-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tts-tag {
+      display: inline-block;
+      padding: 4px 10px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+    }
+
+    /* ========== Download ========== */
+    .download-section {
+      padding: 100px 0;
+    }
+
+    .download-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+
+    .download-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 16px;
+      padding: 36px;
+      text-align: center;
+      transition: all 0.3s;
+    }
+
+    .download-card:hover {
+      border-color: rgba(200, 155, 60, 0.2);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .download-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+    }
+
+    .download-card h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .download-card p {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-bottom: 24px;
+    }
+
+    .download-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn-download {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 20px;
+      background: rgba(200, 155, 60, 0.1);
+      border: 1px solid rgba(200, 155, 60, 0.25);
+      border-radius: 10px;
+      color: var(--accent-gold);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .btn-download:hover {
+      background: rgba(200, 155, 60, 0.2);
+      border-color: rgba(200, 155, 60, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .btn-download.cli {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba(255, 255, 255, 0.1);
+      color: var(--text-secondary);
+    }
+
+    .btn-download.cli:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+    }
+
+    /* ========== Quick Start ========== */
+    .quickstart {
+      padding: 100px 0;
+    }
+
+    .quickstart-steps {
+      max-width: 720px;
+      margin: 48px auto 0;
+    }
+
+    .step {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 36px;
+      position: relative;
+    }
+
+    .step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 19px;
+      top: 48px;
+      bottom: -20px;
+      width: 2px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .step-number {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(200, 155, 60, 0.12);
+      border: 1px solid rgba(200, 155, 60, 0.25);
+      border-radius: 10px;
+      font-weight: 700;
+      color: var(--accent-gold);
+      font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+
+    .step-content h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .step-content p {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      margin-bottom: 12px;
+    }
+
+    .code-block {
+      background: #0d1117;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: #e6edf3;
+      overflow-x: auto;
+    }
+
+    .code-block .comment { color: #6e7681; }
+    .code-block .cmd { color: #79c0ff; }
+
+    /* ========== Footer ========== */
+    footer {
+      padding: 48px 0;
+      border-top: 1px solid var(--border-card);
+      text-align: center;
+    }
+
+    footer p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    footer a:hover {
+      color: var(--accent-gold);
+    }
+
+    /* ========== Animations ========== */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ========== Responsive ========== */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+
+      .hero { padding: 140px 0 80px; }
+
+      .hero-stats {
+        flex-direction: column;
+        gap: 24px;
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .coach-content {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+
+      .tts-providers {
+        grid-template-columns: 1fr;
+      }
+
+      .download-cards {
+        grid-template-columns: 1fr;
+      }
+
+      .step { gap: 16px; }
+    }
+
+    /* ========== Hamburger Menu ========== */
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    @media (max-width: 768px) {
+      .menu-toggle { display: block; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <div class="container">
+      <a href="#" class="nav-brand">🔥 <span>LoL Roaster</span></a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#coach">AI Coach</a></li>
+        <li><a href="#tts">TTS</a></li>
+        <li><a href="#download">Download</a></li>
+        <li><a href="#quickstart">Quick Start</a></li>
+      </ul>
+      <a href="https://github.com/ebwood/LOLRoaster" target="_blank" class="btn-github-nav">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        GitHub
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">🎮 Free &amp; Open Source — MIT License</div>
+      <h1>
+        Your AI<br>
+        <span class="gradient-text">Toxic Coach</span><br>
+        for League
+      </h1>
+      <p class="hero-subtitle">
+        An AI-powered coach that roasts you in real-time when you die in League of Legends.
+        With TTS voice, web dashboard, and dynamic roast themes.
+      </p>
+      <div class="hero-buttons">
+        <a href="#download" class="btn btn-primary">⬇ Download Now</a>
+        <a href="https://github.com/ebwood/LOLRoaster" target="_blank" class="btn btn-secondary">
+          <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          Star on GitHub
+        </a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat">
+          <div class="stat-value">6+</div>
+          <div class="stat-label">Roast Triggers</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">60+</div>
+          <div class="stat-label">Emotion Tags</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">2</div>
+          <div class="stat-label">Languages</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value">∞</div>
+          <div class="stat-label">Roast Themes</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div class="section-tag">Features</div>
+        <h2 class="section-title">Everything You Need to Get Roasted</h2>
+        <p class="section-desc">A full-featured companion that monitors your game, generates AI roasts, and delivers them with emotion-rich voice.</p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card fade-in">
+          <span class="feature-icon">🔍</span>
+          <h3>Auto Detection</h3>
+          <p>Automatically detects your LoL game client. Just launch the app and play — it handles the rest.</p>
+        </div>
+        <div class="feature-card fade-in">
+          <span class="feature-icon">🤖</span>
+          <h3>AI Toxic Coach</h3>
+          <p>LLM-powered roasts with dynamic themes like "disappointed parent" or "suggest uninstall". Powered by Google Gemini.</p>
+        </div>
+        <div class="feature-card fade-in">
+          <span class="feature-icon">🗣️</span>
+          <h3>Premium TTS Voice</h3>
+          <p>ElevenLabs V3 Dialogue API with 60+ emotion audio tags, or free Edge TTS. Hear the roast, don't just read it.</p>
+        </div>
+        <div class="feature-card fade-in">
+          <span class="feature-icon">📡</span>
+          <h3>WebSocket Push</h3>
+          <p>Real-time game data pushed via WebSocket. Connect from any device on your LAN.</p>
+        </div>
+        <div class="feature-card fade-in">
+          <span class="feature-icon">📊</span>
+          <h3>Web Dashboard</h3>
+          <p>Beautiful web UI showing game status, player stats, events, and audio history. All in your browser.</p>
+        </div>
+        <div class="feature-card fade-in">
+          <span class="feature-icon">🌐</span>
+          <h3>Multilingual</h3>
+          <p>Full Chinese &amp; English support for both the UI and AI-generated roasts.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Coach Showcase -->
+  <section class="coach-section" id="coach">
+    <div class="container">
+      <div class="coach-content">
+        <div class="coach-left fade-in">
+          <div class="section-tag">AI Toxic Coach</div>
+          <h2>Roasts That Hit<br>Where It Hurts</h2>
+          <p>The AI coach monitors your game events in real-time and generates contextual roasts with randomized themes for maximum variety.</p>
+          <div class="trigger-list">
+            <div class="trigger-item">
+              <span class="trigger-emoji">💀</span>
+              <div class="trigger-text"><strong>Death</strong> <span>— When you get killed</span></div>
+            </div>
+            <div class="trigger-item">
+              <span class="trigger-emoji">⚔️</span>
+              <div class="trigger-text"><strong>Kill</strong> <span>— When you get a kill</span></div>
+            </div>
+            <div class="trigger-item">
+              <span class="trigger-emoji">💰</span>
+              <div class="trigger-text"><strong>CS Gap</strong> <span>— Poor CS performance</span></div>
+            </div>
+            <div class="trigger-item">
+              <span class="trigger-emoji">🐷</span>
+              <div class="trigger-text"><strong>Teammate Death</strong> <span>— When your teammate dies</span></div>
+            </div>
+            <div class="trigger-item">
+              <span class="trigger-emoji">🐉</span>
+              <div class="trigger-text"><strong>Objectives</strong> <span>— Dragon / Baron / Herald</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="coach-terminal fade-in">
+          <div class="terminal-header">
+            <div class="terminal-dot red"></div>
+            <div class="terminal-dot yellow"></div>
+            <div class="terminal-dot green"></div>
+            <span class="terminal-title">lol-roaster — AI Coach Output</span>
+          </div>
+          <div class="terminal-body">
+            <div class="terminal-line"><span class="t-gold">╔══════════════════════════════════════════╗</span></div>
+            <div class="terminal-line"><span class="t-gold">║</span>   🎮 <span class="t-green">LoL Roaster - AI Toxic Coach</span>        <span class="t-gold">║</span></div>
+            <div class="terminal-line"><span class="t-gold">╚══════════════════════════════════════════╝</span></div>
+            <div class="terminal-line"><span class="t-gray">[12:34:05]</span> <span class="t-green">✓</span> Game detected! Summoner: <span class="t-blue">xXProPlayerXx</span></div>
+            <div class="terminal-line"><span class="t-gray">[12:35:22]</span> <span class="t-red">💀 DEATH</span> — Killed by <span class="t-purple">Zed</span></div>
+            <div class="terminal-line"><span class="t-gray">[12:35:23]</span> <span class="t-yellow">🤖 Coach:</span> <span class="t-gold">[sarcastic tone]</span> Wow, you walked into Zed's shadow like a free delivery service. Even the minions dodge better than you.</div>
+            <div class="terminal-line"><span class="t-gray">[12:35:24]</span> <span class="t-green">🔊 Playing TTS...</span> <span class="t-gray">(ElevenLabs)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TTS Section -->
+  <section class="tts-section" id="tts">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div class="section-tag">Text-to-Speech</div>
+        <h2 class="section-title">Hear the Roast</h2>
+        <p class="section-desc">Choose between free Edge TTS or premium ElevenLabs with emotion-rich audio tags.</p>
+      </div>
+      <div class="tts-providers">
+        <div class="tts-card fade-in">
+          <div class="tts-badge free">Free</div>
+          <h3>Edge TTS</h3>
+          <p>Microsoft Edge's built-in TTS engine. Zero cost, multiple languages, natural-sounding voice.</p>
+          <div class="tts-tags">
+            <span class="tts-tag">Free forever</span>
+            <span class="tts-tag">Multi-language</span>
+            <span class="tts-tag">No API key</span>
+          </div>
+        </div>
+        <div class="tts-card fade-in">
+          <div class="tts-badge premium">Premium</div>
+          <h3>ElevenLabs V3</h3>
+          <p>Dialogue API with 60+ emotion audio tags. The coach can laugh, sigh, whisper, shout, and more.</p>
+          <div class="tts-tags">
+            <span class="tts-tag">[laughs]</span>
+            <span class="tts-tag">[sighs]</span>
+            <span class="tts-tag">[sarcastic tone]</span>
+            <span class="tts-tag">[angry]</span>
+            <span class="tts-tag">[whispers]</span>
+            <span class="tts-tag">[shouts]</span>
+            <span class="tts-tag">+ 54 more</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download -->
+  <section class="download-section" id="download">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div class="section-tag">Download</div>
+        <h2 class="section-title">Get LoL Roaster</h2>
+        <p class="section-desc">Desktop app with system tray, or lightweight CLI — your choice.</p>
+      </div>
+      <div class="download-cards">
+        <div class="download-card fade-in">
+          <div class="download-icon">🍎</div>
+          <h3>macOS</h3>
+          <p>Apple Silicon &amp; Intel</p>
+          <div class="download-btns">
+            <a href="https://github.com/ebwood/LOLRoaster/releases/latest" target="_blank" class="btn-download">⬇ Desktop App (.dmg)</a>
+            <a href="https://github.com/ebwood/LOLRoaster/releases/latest" target="_blank" class="btn-download cli">Terminal CLI</a>
+          </div>
+        </div>
+        <div class="download-card fade-in">
+          <div class="download-icon">🪟</div>
+          <h3>Windows</h3>
+          <p>Windows 10+</p>
+          <div class="download-btns">
+            <a href="https://github.com/ebwood/LOLRoaster/releases/latest" target="_blank" class="btn-download">⬇ Desktop App (.exe)</a>
+            <a href="https://github.com/ebwood/LOLRoaster/releases/latest" target="_blank" class="btn-download cli">Terminal CLI</a>
+          </div>
+        </div>
+        <div class="download-card fade-in">
+          <div class="download-icon">🐧</div>
+          <h3>Linux</h3>
+          <p>x64 AppImage &amp; CLI</p>
+          <div class="download-btns">
+            <a href="https://github.com/ebwood/LOLRoaster/releases/latest" target="_blank" class="btn-download">⬇ Desktop App</a>
+            <a href="https://github.com/ebwood/LOLRoaster/releases/latest" target="_blank" class="btn-download cli">Terminal CLI</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Quick Start -->
+  <section class="quickstart" id="quickstart">
+    <div class="container">
+      <div class="section-header fade-in">
+        <div class="section-tag">Quick Start</div>
+        <h2 class="section-title">Up &amp; Running in 2 Minutes</h2>
+      </div>
+      <div class="quickstart-steps">
+        <div class="step fade-in">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Install &amp; Configure</h3>
+            <p>Clone the repo and set up your API keys.</p>
+            <div class="code-block">
+              <span class="cmd">git clone</span> https://github.com/ebwood/LOLRoaster.git<br>
+              <span class="cmd">cd</span> LOLRoaster<br>
+              <span class="cmd">npm install</span><br>
+              <span class="cmd">cp</span> .env.example .env<br>
+              <span class="comment"># Edit .env with your Gemini API key</span>
+            </div>
+          </div>
+        </div>
+        <div class="step fade-in">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Launch</h3>
+            <p>Start the app and open the dashboard.</p>
+            <div class="code-block">
+              <span class="cmd">npm run dev</span><br>
+              <span class="comment"># Open http://localhost:8099</span>
+            </div>
+          </div>
+        </div>
+        <div class="step fade-in">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Play League</h3>
+            <p>Start a game. The coach will auto-detect your client and begin roasting. Enjoy (or suffer)! 🔥</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <p>
+        🔥 <strong>LoL Roaster</strong> — Open Source under
+        <a href="https://github.com/ebwood/LOLRoaster/blob/main/LICENSE" target="_blank">MIT License</a>
+        &nbsp;·&nbsp;
+        <a href="https://github.com/ebwood/LOLRoaster" target="_blank">GitHub</a>
+        &nbsp;·&nbsp;
+        Made with ❤️ and salt
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    // Intersection Observer for fade-in animations
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+    // Smooth scroll for nav links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+      anchor.addEventListener('click', function (e) {
+        e.preventDefault();
+        const target = document.querySelector(this.getAttribute('href'));
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
