@@ -37,6 +37,7 @@ jobs:
         with:
           name: cli-builds
           path: dist/
+          retention-days: 1
 
   # CLI macOS build with code signing
   build-cli-mac:
@@ -94,6 +95,7 @@ jobs:
         with:
           name: cli-mac-build
           path: dist/lol-roaster-macos
+          retention-days: 1
 
   # Electron builds - must run on native OS
   build-electron:
@@ -140,6 +142,7 @@ jobs:
         with:
           name: electron-${{ matrix.os }}
           path: ${{ matrix.artifact }}
+          retention-days: 1
 
   # Create GitHub Release with all artifacts
   release:
