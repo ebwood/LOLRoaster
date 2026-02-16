@@ -1,4 +1,4 @@
-# LoL 实时数据代理
+# LoL Roaster - AI 毒舌教练
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
@@ -131,7 +131,7 @@ git push origin v0.2.0
 ```
 
 推送 tag 后，GitHub Actions 会自动构建：
-- **CLI**: `lol-proxy-win.exe` + `lol-proxy-macos` (via pkg)
+- **CLI**: `lol-roaster-win.exe` + `lol-roaster-macos` (via pkg)
 - **桌面应用**: `.dmg` (macOS) + `.exe` 安装包 (Windows) (via electron-builder)
 
 所有产物发布到 GitHub Releases 页面。

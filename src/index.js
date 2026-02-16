@@ -29,7 +29,7 @@ function getLocalIPs() {
 async function main() {
   console.log('');
   console.log('╔══════════════════════════════════════════╗');
-  console.log('║   🎮 LoL Live Client Data Proxy          ║');
+  console.log('║   🎮 LoL Roaster - AI Toxic Coach        ║');
   console.log('╚══════════════════════════════════════════╝');
   console.log('');
 

@@ -10,7 +10,7 @@ function getConfigPath() {
       const { app } = require('electron');
       return path.join(app.getPath('userData'), 'config.json');
     } catch {
-      return path.join(require('os').homedir(), '.lol-proxy', 'config.json');
+      return path.join(require('os').homedir(), '.lol-roaster', 'config.json');
     }
   }
   return defaultPath;

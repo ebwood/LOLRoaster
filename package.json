@@ -1,7 +1,7 @@
 {
-  "name": "lol-proxy",
-  "version": "0.3.6",
-  "description": "LoL Live Client Data API proxy - expose game data to LAN",
+  "name": "lol-roaster",
+  "version": "0.4.0",
+  "description": "AI Toxic Coach for League of Legends - real-time roasts with TTS powered by LLM",
   "author": "ebwood",
   "main": "electron/main.js",
   "bin": "index.js",
@@ -29,8 +29,8 @@
     ]
   },
   "build": {
-    "appId": "com.ebwood.lol-proxy",
-    "productName": "LoL Proxy",
+    "appId": "com.ebwood.lol-roaster",
+    "productName": "LoL Roaster",
     "directories": {
       "output": "dist-electron"
     },

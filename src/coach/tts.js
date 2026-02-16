@@ -74,7 +74,7 @@ class TTS extends EventEmitter {
         return path.join(app.getPath('userData'), 'cache_tts');
       } catch {
         // Fallback for non-electron packaged builds
-        return path.join(require('os').homedir(), '.lol-proxy', 'cache_tts');
+        return path.join(require('os').homedir(), '.lol-roaster', 'cache_tts');
       }
     }
     return path.join(__dirname, '../../cache_tts');
@@ -195,7 +195,7 @@ class TTS extends EventEmitter {
             cluster: 'volcano_tts'
           },
           user: {
-            uid: 'lol-proxy-user'
+            uid: 'lol-roaster-user'
           },
           audio: {
             voice_type: voiceType,

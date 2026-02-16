@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LoL Live Client Data Proxy</title>
+  <title>LoL Roaster - AI Toxic Coach</title>
   <link rel="icon" href="favicon.png" type="image/png">
   <style>
     * {
@@ -682,7 +682,7 @@
     <div style="display: flex; align-items: center; gap: 12px;">
       <div style="display: flex; align-items: center;">
         <img src="favicon.png" alt="icon" style="height: 32px; width: 32px; margin-right: 12px;">
-        <h1 data-i18n="title">LoL Live Client Data Proxy</h1>
+        <h1 data-i18n="title">LoL Roaster</h1>
       </div>
       <button id="langSwitch" class="lang-switch" onclick="toggleLanguage()">EN / 中</button>
       <button class="settings-btn" onclick="openSettings()" title="Settings">⚙️</button>
@@ -957,7 +957,7 @@
   <script>
     const i18n = {
       zh: {
-        title: "LoL Live Client Data Proxy",
+        title: "LoL Roaster",
         "status.waiting": "等待连接...",
         "status.online": "游戏进行中",
         "status.offline": "等待游戏...",
@@ -1021,7 +1021,7 @@
         "minion": "小兵"
       },
       en: {
-        title: "LoL Live Client Data Proxy",
+        title: "LoL Roaster",
         "status.waiting": "Waiting for connection...",
         "status.online": "Game Running",
         "status.offline": "Waiting for Game...",
@@ -1086,7 +1086,7 @@
       }
     };
 
-    let currentLang = localStorage.getItem('lol-proxy-lang') || 'zh';
+    let currentLang = localStorage.getItem('lol-roaster-lang') || 'zh';
 
     function t(key) {
       return i18n[currentLang][key] || key;
@@ -1094,7 +1094,7 @@
 
     function setLanguage(lang) {
       currentLang = lang;
-      localStorage.setItem('lol-proxy-lang', lang);
+      localStorage.setItem('lol-roaster-lang', lang);
       document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
 
       // Sync with backend

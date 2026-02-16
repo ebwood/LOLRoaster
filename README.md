@@ -1,4 +1,4 @@
-# LoL Live Client Data Proxy
+# LoL Roaster
 
 [English](README.md) | [简体中文](README_zh-CN.md)
 
@@ -131,7 +131,7 @@ git push origin v0.2.0
 ```
 
 Pushing a tag triggers GitHub Actions to automatically build:
-- **CLI**: `lol-proxy-win.exe` + `lol-proxy-macos` (via pkg)
+- **CLI**: `lol-roaster-win.exe` + `lol-roaster-macos` (via pkg)
 - **Desktop**: `.dmg` (macOS) + `.exe` installer (Windows) (via electron-builder)
 
 All artifacts are published on the GitHub Releases page.

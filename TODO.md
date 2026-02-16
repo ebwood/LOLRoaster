@@ -1,4 +1,4 @@
-# TODO - LoL Proxy AI Coach
+# TODO - LoL Roaster AI Coach
 
 ## 🎭 人格系统（优先级：高）
 

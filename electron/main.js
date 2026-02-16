@@ -13,7 +13,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     show: false,
-    title: 'LoL Proxy - AI Coach',
+    title: 'LoL Roaster - AI Coach',
     backgroundColor: '#0d1117',
     webPreferences: {
       nodeIntegration: false,
@@ -71,7 +71,7 @@ function createTray() {
   );
 
   tray = new Tray(icon);
-  tray.setToolTip('LoL Proxy - AI Coach');
+  tray.setToolTip('LoL Roaster - AI Coach');
 
   const contextMenu = Menu.buildFromTemplate([
     {
