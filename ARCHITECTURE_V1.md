@@ -1,213 +1,213 @@
-# 🎮 LoL AI 毒舌教练 — v1 进阶架构实施方案
+# 🎮 LoL AI Toxic Coach — v1 Advanced Architecture Plan
 
-> 基于外部建议 + 代码现状 + Live Client API 实际能力，整理的可落地方案。
-> 目标：从"事件触发型"升级为"陪玩式吐槽"，让 AI 更像损友而不是机器人。
+> Based on external suggestions + current codebase + Live Client API capabilities, this is a practical implementation plan.
+> Goal: Evolve from "event-triggered" to "companion-style roasting" — making the AI feel more like a trash-talking friend than a robot.
 
 ---
 
-## 一、当前版本（v0.3.6）现状
+## 1. Current Version (v0.3.6) Status
 
-### 已有能力
-- 事件检测：DEATH / KILL / TEAMMATE_DEATH / OBJECTIVE（龙/塔/峡谷先锋/男爵）/ MULTIKILL
-- 每 3 秒轮询 Live Client API
-- LLM 生成嘲讽（DeepSeek 等 OpenAI 兼容 API）
-- TTS 多引擎（Edge / ElevenLabs / 豆包 / Fish Audio）
-- Web Settings 面板，热重载
+### Existing Capabilities
+- Event detection: DEATH / KILL / TEAMMATE_DEATH / OBJECTIVE (Dragon/Turret/Herald/Baron) / MULTIKILL
+- Polls Live Client API every 3 seconds
+- LLM-generated roasts (DeepSeek and other OpenAI-compatible APIs)
+- Multi-engine TTS (Edge / ElevenLabs / Volcengine / Fish Audio)
+- Web Settings panel with hot-reload
 
-### 核心问题
-| 问题 | 原因 |
+### Core Issues
+| Issue | Root Cause |
 |---|---|
-| 每次嘲讽"从零生成" | 没有上下文记忆，不知道你之前死了几次 |
-| 80% 时间沉默 | 只盯事件，没有"观察型"评论 |
-| 嘲讽不够精准 | 没有利用英雄名、装备、技能等细节 |
-| 语气没有递进 | 第1次死和第10次死一样毒 |
+| Every roast is "generated from scratch" | No context memory — doesn't know you've died several times already |
+| Silent 80% of the time | Only watches for events, no "observational" commentary |
+| Roasts lack precision | Doesn't leverage champion names, items, abilities, etc. |
+| No escalation in tone | 1st death and 10th death get the same level of toxicity |
 
 ---
 
-## 二、Live Client API 实际可用数据（实测）
+## 2. Live Client API Available Data (Tested)
 
-### ✅ 能拿到的
+### ✅ What We Can Get
 
-| 数据 | 来源 | 用途 |
+| Data | Source | Usage |
 |---|---|---|
-| KDA | `allPlayers[].scores` | 死亡/击杀/助攻 |
-| CS（补刀） | `allPlayers[].scores.creepScore` | CS/min 计算 |
-| 等级 | `activePlayer.level` | 等级差 |
-| 英雄名 | `allPlayers[].championName` | 英雄针对性嘲讽 |
-| 装备 | `allPlayers[].items` | 出装吐槽 |
-| 召唤师技能CD | `activePlayer.summonerSpells` | 闪现检测 |
-| 血量/蓝量 | `activePlayer.championStats.currentHealth/maxHealth` | 低血检测 |
-| 游戏时间 | `gameData.gameTime` | 时间线 |
-| 全局事件 | `eventdata.Events` | 龙/塔/击杀 |
-| 所有玩家KDA | `allPlayers[].scores` | 对比/排名 |
-| 队伍 | `allPlayers[].team` | 敌我判断 |
-| 技能等级 | `activePlayer.abilities` | 是否点了大招 |
-| 符文 | `activePlayer.fullRunes` | — |
+| KDA | `allPlayers[].scores` | Deaths/Kills/Assists |
+| CS (Creep Score) | `allPlayers[].scores.creepScore` | CS/min calculation |
+| Level | `activePlayer.level` | Level difference |
+| Champion Name | `allPlayers[].championName` | Champion-specific roasts |
+| Items | `allPlayers[].items` | Build roasting |
+| Summoner Spell CD | `activePlayer.summonerSpells` | Flash detection |
+| HP/Mana | `activePlayer.championStats.currentHealth/maxHealth` | Low HP detection |
+| Game Time | `gameData.gameTime` | Timeline |
+| Global Events | `eventdata.Events` | Dragon/Turret/Kills |
+| All Player KDAs | `allPlayers[].scores` | Comparison/Ranking |
+| Team | `allPlayers[].team` | Friend/Foe detection |
+| Ability Levels | `activePlayer.abilities` | Ult level check |
+| Runes | `activePlayer.fullRunes` | — |
 
-### ❌ 拿不到的（别浪费时间）
+### ❌ What We Can't Get (Don't Waste Time)
 
-| 数据 | 影响 |
+| Data | Impact |
 |---|---|
-| 玩家位置 (x, y) | 无法判断"远离兵线"、"河道"、"团战距离" |
-| currentGold / totalGold | 无法精确算经济差 |
-| Ping 信号 | 无法检测"队友打信号" |
-| 技能命中率 | 无法检测"空Q" |
-| 视野/眼 | 无法检测"不插眼" |
-| 对线对手 | 需要自己推断 |
+| Player Position (x, y) | Can't detect "away from minions", "in river", "teamfight distance" |
+| currentGold / totalGold | Can't precisely calculate gold difference |
+| Ping Signals | Can't detect "teammate pinging" |
+| Ability Hit Rate | Can't detect "missed skillshot" |
+| Vision/Wards | Can't detect "not placing wards" |
+| Lane Opponent | Must be inferred |
 
 ---
 
-## 三、新增模块设计
+## 3. New Module Designs
 
-### 模块 1：Memory Store（短期记忆）⭐ P0
+### Module 1: Memory Store (Short-term Memory) ⭐ P0
 
-**目标**：让 AI "记仇"，知道最近发生了什么。
+**Goal**: Let the AI "hold grudges" — know what happened recently.
 
 ```javascript
 // src/coach/memory.js
 class Memory {
   constructor() {
-    this.deathCount = 0;           // 本局总死亡
-    this.recentDeaths = [];        // 最近 5 分钟的死亡时间戳
-    this.killStreak = 0;           // 连杀
-    this.deathStreak = 0;          // 连死（没杀人期间死了几次）
-    this.killedBy = {};            // { "敌方名字": 次数 } — 被谁杀
-    this.lastDeathTime = 0;        // 上次死亡时间（gameTime）
-    this.lastKillTime = 0;         // 上次击杀时间
-    this.lastSpokenTime = 0;       // 上次 AI 说话的 gameTime
-    this.lastSpokenType = '';      // 上次说话类型（避免重复类型）
-    this.csHistory = [];           // [{time, cs}] 用于算 CS/min 变化
+    this.deathCount = 0;           // Total deaths this game
+    this.recentDeaths = [];        // Death timestamps in the last 5 minutes
+    this.killStreak = 0;           // Kill streak
+    this.deathStreak = 0;          // Death streak (deaths without any kills in between)
+    this.killedBy = {};            // { "enemy_name": count } — who killed you
+    this.lastDeathTime = 0;        // Last death time (gameTime)
+    this.lastKillTime = 0;         // Last kill time
+    this.lastSpokenTime = 0;       // Last time the AI spoke (gameTime)
+    this.lastSpokenType = '';      // Last roast type (avoid repeating same type)
+    this.csHistory = [];           // [{time, cs}] for calculating CS/min changes
     this.mood = 'calm';            // calm | annoyed | furious
-    this.flashUsedTime = 0;        // 上次交闪现的时间
-    this.champion = '';            // 当前英雄
-    this.totalRoastCount = 0;      // 本局总嘲讽次数
+    this.flashUsedTime = 0;        // Last time Flash was used
+    this.champion = '';            // Current champion
+    this.totalRoastCount = 0;      // Total roasts this game
   }
 
-  // 死亡时更新
+  // Update on death
   onDeath(gameTime, killerName) { ... }
 
-  // 击杀时更新
+  // Update on kill
   onKill(gameTime) { ... }
 
-  // 每次 tick 更新 CS
+  // Update CS each tick
   updateCS(gameTime, cs) { ... }
 
-  // 更新情绪状态
+  // Update mood state
   updateMood() { ... }
 
-  // 获取上下文摘要（给 LLM 用）
+  // Get context summary (for LLM)
   getSummary() { ... }
 
-  // 重置（新游戏）
+  // Reset (new game)
   reset() { ... }
 }
 ```
 
-**关键派生指标**：
+**Key Derived Metrics**:
 - `csPerMin` = totalCS / (gameTime / 60)
-- `recentDeathCount` = 最近 3 分钟内死亡次数
-- `deathStreak` = 连续死亡次数（中间没有击杀）
-- `killedBySame` = 被同一人杀 >= 2 次
-- `flashThenDie` = 交闪现后 15 秒内死亡
+- `recentDeathCount` = deaths within the last 3 minutes
+- `deathStreak` = consecutive deaths (no kills in between)
+- `killedBySame` = killed by the same person >= 2 times
+- `flashThenDie` = died within 15 seconds of using Flash
 
-**工作量**：~2 小时
-
----
-
-### 模块 2：Policy Engine（说话策略）⭐ P0
-
-**目标**：控制说话频率、类型和强度，避免刷屏或重复。
-
-#### 频率控制
-```
-- 事件吐槽：事件后 1-2 秒触发（给游戏音效让路）
-- 节奏吐槽：每 20-30 秒尝试一次（有可说的才说）
-- 冷却：同类型吐槽至少间隔 30 秒
-- 全局冷却：任意吐槽之间至少 8 秒
-```
-
-#### 嘴臭等级（绑定 mood）
-| Mood | 触发条件 | 说话风格 |
-|---|---|---|
-| `calm` | 默认 / 长时间没死 | 轻微调侃、阴阳怪气 |
-| `annoyed` | 3分钟死>=2 或 csPerMin<3.5 | 开始上强度 |
-| `furious` | 3分钟死>=3 或 连死>=4 或 0/5+ | 贴脸输出、不留情面 |
-
-#### 情绪状态机
-```
-calm → annoyed：3分钟死>=2 或 csPerMin<3.5
-annoyed → furious：连死>=4 或 KDA 极差
-furious → annoyed：3分钟无死亡
-annoyed → calm：5分钟无死亡且 csPerMin 回升
-```
-
-**工作量**：~2 小时
+**Effort**: ~2 hours
 
 ---
 
-### 模块 3：Rhythm Roast（节奏吐槽）⭐ P1
+### Module 2: Policy Engine (Speech Strategy) ⭐ P0
 
-**目标**：游戏 80% 时间不再沉默，每 20-30 秒可能插一句。
+**Goal**: Control speech frequency, type, and intensity — avoid spam or repetition.
 
-#### 可检测的节奏触发条件（基于实际 API）
+#### Frequency Control
+```
+- Event roasts: Trigger 1-2 seconds after event (give game sound effects room)
+- Rhythm roasts: Attempt every 20-30 seconds (only if there's something to say)
+- Cooldown: Same roast type at least 30 seconds apart
+- Global cooldown: At least 8 seconds between any roasts
+```
 
-| 触发条件 | 检测方式 | 示例台词 |
+#### Toxicity Level (Tied to Mood)
+| Mood | Trigger Condition | Speech Style |
 |---|---|---|
-| CS/min < 4 | csHistory 计算 | "兄弟你这补刀，按月结的吧？" |
-| CS/min < 2.5（严重） | csHistory 计算 | "小兵看到你都绕路走了吧" |
-| 低血持续 20s+ | championStats.currentHealth | "你血条都见底了还不回家？等着被人来收了？" |
-| 等级落后 >= 2 | 与对面同位比较 level | "人家都 11 了你还 9，你挂机了？" |
-| 被同一人杀 >= 2 | memory.killedBy | "又是他？你俩私下认识吧" |
-| 连死后又死 | memory.deathStreak>=3 | "我数着呢，第四次了啊兄弟" |
-| 长时间无收益 | 60s 无击杀/助攻/CS不涨 | "你在干啥呢，发呆吗？" |
-| 出装奇怪 | items 检查 | "你这出装是让 AI 推荐的吧" |
-| 队友连死 | teammate death 事件 | "你队友都死完了你知道吗" |
+| `calm` | Default / long time without dying | Light teasing, subtle sarcasm |
+| `annoyed` | >= 2 deaths in 3 min OR csPerMin < 3.5 | Ramping up intensity |
+| `furious` | >= 3 deaths in 3 min OR death streak >= 4 OR 0/5+ KDA | Full-on roasting, no mercy |
 
-#### 不能做的（需要位置数据）
-- ❌ "远离兵线" — 没有位置
-- ❌ "团战不在" — 没有距离
-- ❌ "走同一路线送死" — 没有路径
-- ❌ "队友打信号" — 没有 ping
+#### Mood State Machine
+```
+calm → annoyed:  >= 2 deaths in 3 min OR csPerMin < 3.5
+annoyed → furious:  death streak >= 4 OR extremely bad KDA
+furious → annoyed:  3 minutes without dying
+annoyed → calm:  5 minutes without dying AND csPerMin recovers
+```
 
-**工作量**：~3 小时
+**Effort**: ~2 hours
 
 ---
 
-### 模块 4：Template Layer（模板层）⭐ P1
+### Module 3: Rhythm Roast (Periodic Commentary) ⭐ P1
 
-**目标**：让 LLM 输出更稳定、更口语化。
+**Goal**: No more silence during 80% of the game — potential comment every 20-30 seconds.
 
-#### 设计思路
-不再完全依赖 LLM 自由生成。改为：
-1. **系统根据数据匹配最佳模板类型**（1-3 个候选）
-2. **把模板候选 + 游戏数据 + 记忆上下文发给 LLM**
-3. **LLM 只做"润色/选择/加细节"**
+#### Detectable Rhythm Triggers (Based on Actual API)
 
-#### 模板类型（首批 15 个）
-
-| 模板 ID | 触发条件 | 示例 |
+| Trigger Condition | Detection Method | Example Line |
 |---|---|---|
-| `death_generic` | 每次死亡 | "又死了，你是觉得泉水舒服是吗" |
-| `death_streak` | 连死 >= 3 | "第 {n} 次了，我都不想数了" |
-| `cs_shame` | csPerMin < 4 | "{min} 分钟 {cs} 刀，你在拿补刀锻炼耐心呢？" |
-| `cs_severe` | csPerMin < 2.5 | "这补刀数，我用脚玩都比你强" |
-| `flash_shame` | 交闪现后还是死了 | "闪现交得真好看，然后呢？" |
-| `killed_by_same` | 被同一人杀 >= 2 | "又是 {killer}？你俩加好友了吧" |
-| `low_hp_no_recall` | 低血持续 >= 20s | "你这血条都红了还在逛街呢？" |
-| `level_behind` | 等级落后 >= 2 | "人家 {enemy_level} 你才 {my_level}" |
-| `kill_praise` | 击杀 | "可以啊，这次没砸" |
-| `kill_streak` | 连续击杀 >= 3 | "行啊你今天状态不错" |
-| `objective_taken` | 我方拿龙/塔 | "终于干了点正事" |
-| `objective_lost` | 敌方拿龙/塔 | "龙都没了你们在那摸鱼呢" |
-| `long_idle` | 60s 无收益 | "你在干啥呢？AFK了？" |
-| `bad_build` | 装备异常 | "你这出装...认真的？" |
-| `teammate_dying` | 队友连死 | "你队友都快投了你知道吗" |
+| CS/min < 4 | csHistory calculation | "Bro, your CS... are you getting paid monthly?" |
+| CS/min < 2.5 (severe) | csHistory calculation | "The minions are dodging YOU at this point" |
+| Low HP for 20s+ | championStats.currentHealth | "Your health bar is empty — waiting for someone to collect you?" |
+| Level behind >= 2 | Compare with enemy level | "They're level 11 and you're still 9... are you AFK?" |
+| Killed by same person >= 2 | memory.killedBy | "Him again? You two dating or something?" |
+| Dying again on a death streak | memory.deathStreak >= 3 | "I'm counting — that's number four, buddy" |
+| No activity for 60s | No kills/assists/CS increase | "What are you doing? Just standing there?" |
+| Weird item build | items check | "Did an AI recommend that build?" |
+| Teammate dying repeatedly | Teammate death events | "Your teammates are all dead, you know that right?" |
 
-#### LLM 输入结构（新版）
+#### What We Can't Do (Requires Position Data)
+- ❌ "Away from minion wave" — no position data
+- ❌ "Not in teamfight" — no distance data
+- ❌ "Walking the same path to die" — no pathing data
+- ❌ "Teammate pinging you" — no ping data
+
+**Effort**: ~3 hours
+
+---
+
+### Module 4: Template Layer ⭐ P1
+
+**Goal**: Make LLM output more stable and natural-sounding.
+
+#### Design Approach
+Stop relying entirely on free-form LLM generation. Instead:
+1. **System matches best template types based on data** (1-3 candidates)
+2. **Send template candidates + game data + memory context to LLM**
+3. **LLM only does "polish/select/add details"**
+
+#### Template Types (Initial 15)
+
+| Template ID | Trigger Condition | Example |
+|---|---|---|
+| `death_generic` | Every death | "Dead again. Is the fountain that comfy?" |
+| `death_streak` | Death streak >= 3 | "That's death #{n}. I've lost count" |
+| `cs_shame` | csPerMin < 4 | "{min} minutes, {cs} CS — practicing patience?" |
+| `cs_severe` | csPerMin < 2.5 | "I could CS better with my feet" |
+| `flash_shame` | Flashed and still died | "Nice Flash! And then... what?" |
+| `killed_by_same` | Killed by same person >= 2 | "{killer} again? You two friends now?" |
+| `low_hp_no_recall` | Low HP for >= 20s | "Your health bar is red and you're just... shopping?" |
+| `level_behind` | Level behind >= 2 | "They're level {enemy_level}, you're {my_level}" |
+| `kill_praise` | Kill secured | "Not bad, you didn't mess that one up" |
+| `kill_streak` | Kill streak >= 3 | "Okay, you're actually on fire today" |
+| `objective_taken` | Team takes Dragon/Turret | "Finally doing something useful" |
+| `objective_lost` | Enemy takes Dragon/Turret | "Dragon's gone. What were you all doing?" |
+| `long_idle` | No activity for 60s | "Hello? Are you AFK?" |
+| `bad_build` | Abnormal items | "That build... are you serious?" |
+| `teammate_dying` | Teammates dying repeatedly | "Your teammates are about to surrender, FYI" |
+
+#### LLM Input Structure (New)
 
 ```json
 {
-  "persona": "嘴臭损友",
+  "persona": "trash-talking friend",
   "mood": "annoyed",
   "memory": {
     "deathStreak": 3,
@@ -218,201 +218,201 @@ annoyed → calm：5分钟无死亡且 csPerMin 回升
   },
   "game": {
     "minute": 12,
-    "champion": "亚索",
+    "champion": "Yasuo",
     "kda": "0/4/1",
     "cs": 38
   },
   "candidateTemplates": ["death_streak", "cs_shame", "killed_by_same"],
   "rules": {
     "maxChars": 50,
-    "style": "口语短句",
+    "style": "short colloquial sentences",
     "mustUseStats": true
   }
 }
 ```
 
-**工作量**：~3 小时
+**Effort**: ~3 hours
 
 ---
 
-### 模块 5：英雄针对性嘲讽 ⭐ P1
+### Module 5: Champion-Specific Roasts ⭐ P1
 
-**目标**：利用英雄名生成更精准的嘲讽。
+**Goal**: Leverage champion names for more targeted roasts.
 
-Live Client API 的 `allPlayers[].championName` 可以拿到英雄名。
+The Live Client API's `allPlayers[].championName` provides champion names.
 
-#### 热门英雄梗库
-| 英雄 | 梗 |
+#### Popular Champion Meme Library
+| Champion | Memes |
 |---|---|
-| Yasuo 亚索 | 0/10 必经之路、快乐风男 |
-| Teemo 提莫 | 蘑菇人、人人喊打 |
-| Master Yi 易大师 | 无脑右键 |
-| Vayne 薇恩 | 天选之人综合症、1v5 狂人 |
-| Lee Sin 盲僧 | 回旋踢踢到队友 |
-| Thresh 锤石 | 灯笼不点 |
-| Riven 锐雯 | 光速QA |
+| Yasuo | The 0/10 power spike, inting swordsman |
+| Teemo | Satan, universally hated |
+| Master Yi | Right-click champion, braindead |
+| Vayne | Main character syndrome, 1v5 delusion |
+| Lee Sin | Insec kick... into your own team |
+| Thresh | Lantern? What lantern? |
+| Riven | Fast Q combo... or not |
 
-将英雄名传入 LLM prompt 即可，LLM 本身知道大部分英雄梗。
+Just pass the champion name into the LLM prompt — most LLMs already know champion memes.
 
-**工作量**：~1 小时（改 prompt 传入 champion 字段）
+**Effort**: ~1 hour (add champion field to prompt)
 
 ---
 
-### 模块 6：人格系统 ⭐ P2
+### Module 6: Personality System ⭐ P2
 
-**目标**：用户选择不同人设，影响所有嘲讽的语气和用词。
+**Goal**: Let users choose different personas that affect the tone and vocabulary of all roasts.
 
-#### 预设人格
-| 人格 | 风格 | 口癖 |
+#### Preset Personalities
+| Personality | Style | Catchphrases |
 |---|---|---|
-| 嘴臭损友（默认） | 像一起开黑的朋友 | "兄弟"、"你认真的？"、"我服了" |
-| 失望老父亲 | 叹气、长辈式 | "唉"、"我当年…"、"算了算了" |
-| 阴阳怪气队友 | 假客气、反讽 | "没事没事"、"不怪你"、"加油哦" |
-| 热血解说 | 激动但嫌弃 | "观众朋友们！"、"不敢相信" |
-| 自定义 | 用户写 system prompt | — |
+| Trash-Talking Friend (Default) | Like a duo-queue buddy | "Bro", "Are you serious?", "I can't even" |
+| Disappointed Dad | Sighing, elder-like | "Sigh", "Back in my day...", "Forget it" |
+| Passive-Aggressive Teammate | Fake kindness, irony | "It's fine, it's fine", "Not your fault", "Keep it up :)" |
+| Hype Caster | Excited but disdainful | "Ladies and gentlemen!", "Unbelievable!" |
+| Custom | User writes system prompt | — |
 
-实现：Settings 加下拉选择，system prompt 开头加人设描述。
+Implementation: Add dropdown in Settings, prepend persona description to system prompt.
 
-**工作量**：~2 小时
-
----
-
-### 模块 7：对局总结 ⭐ P3
-
-**目标**：游戏结束时生成全场回顾。
-
-检测 `GameEnd` 事件，把 Memory 中的数据汇总发给 LLM 生成总结。
-
-**输入**：总 KDA、总 CS、总死亡、连死峰值、被谁杀最多、MVP 时刻
-**输出**：一段 100-200 字的全场点评
-
-**工作量**：~2 小时
+**Effort**: ~2 hours
 
 ---
 
-### 模块 8：Vision Layer（视觉感知层）⭐ P4 — 终极形态
+### Module 7: Post-Game Summary ⭐ P3
 
-**目标**：通过屏幕截图 + Gemini Live API，获取 Live Client API 无法提供的视觉信息。
+**Goal**: Generate a full game review when the match ends.
 
-#### 解决的核心问题
+Detect the `GameEnd` event, aggregate Memory data, and send to LLM for summary generation.
 
-| 之前拿不到的 | 视觉感知后 |
+**Input**: Total KDA, total CS, total deaths, peak death streak, who killed you most, MVP moments
+**Output**: A 100-200 word match review
+
+**Effort**: ~2 hours
+
+---
+
+### Module 8: Vision Layer (Visual Perception) ⭐ P4 — Ultimate Form
+
+**Goal**: Use screen capture + Gemini Live API to obtain visual information that the Live Client API cannot provide.
+
+#### Core Problems Solved
+
+| Previously Unavailable | With Visual Perception |
 |---|---|
-| 玩家位置 | ✅ 小地图读取 |
-| 团战正在发生 | ✅ 画面混战识别 |
-| 技能空了/命中 | ✅ 直接看到 |
-| 走位好坏 | ✅ 看得出来 |
-| 队友打信号(ping) | ✅ ping 图标可见 |
-| 视野/眼位 | ✅ 小地图可见 |
-| 你在摸鱼还是对线 | ✅ 大画面判断 |
+| Player position | ✅ Minimap reading |
+| Teamfight happening | ✅ Screen chaos detection |
+| Missed/landed abilities | ✅ Directly visible |
+| Good/bad positioning | ✅ Observable |
+| Teammate pings | ✅ Ping icons visible |
+| Vision/wards | ✅ Visible on minimap |
+| Farming vs. idling | ✅ Full-screen context |
 
-#### 架构设计
+#### Architecture Design
 
 ```
-屏幕截图 (screenshot-desktop, 每 3-5 秒)
+Screen Capture (screenshot-desktop, every 3-5 seconds)
         ↓
-  图片 Base64 编码
+  Image Base64 Encoding
         ↓
-  Gemini Live API (WebSocket 长连接)
-    - 发送：截图 + 结构化提问
-    - 接收：JSON 格式的场景分析
+  Gemini Live API (WebSocket persistent connection)
+    - Send: screenshot + structured query
+    - Receive: JSON-formatted scene analysis
         ↓
-  合并到 Memory Store → Policy Engine → 触发嘲讽
+  Merge into Memory Store → Policy Engine → Trigger Roasts
 ```
 
-#### Gemini 提问模板
+#### Gemini Query Template
 
 ```
-你是一个 LOL 游戏分析员。看这张截图，快速回答：
-1. 玩家在做什么？（对线/打团/打野/回城/游走/发呆）
-2. 有没有明显失误？（空技能/走位差/不看地图）
-3. 小地图上的局势如何？
-4. 有队友在打信号吗？
-用 JSON 回答，每个字段一句话。
+You are a LoL game analyst. Look at this screenshot and quickly answer:
+1. What is the player doing? (laning/teamfighting/jungling/recalling/roaming/idling)
+2. Any obvious mistakes? (missed abilities/bad positioning/not watching minimap)
+3. How does the minimap situation look?
+4. Are any teammates pinging?
+Answer in JSON, one sentence per field.
 ```
 
-#### 采样策略（控制成本）
+#### Sampling Strategy (Cost Control)
 
-| 场景 | 截图频率 | 原因 |
+| Scenario | Capture Frequency | Reason |
 |---|---|---|
-| 正常对线 | 每 5 秒 | 低消耗 |
-| 检测到死亡/击杀 | 立即截图 | 抓现场 |
-| 团战中 | 每 2 秒 | 密集分析 |
-| 死亡等待复活 | 暂停 | 无需分析 |
+| Normal laning | Every 5 seconds | Low consumption |
+| Death/kill detected | Immediate capture | Catch the scene |
+| During teamfight | Every 2 seconds | Dense analysis |
+| Dead, waiting to respawn | Paused | No need to analyze |
 
-#### 成本估算
+#### Cost Estimate
 
-- 一局 30 分钟 ≈ 360-600 张截图
-- Gemini Flash 处理图片：~260 token/张
-- 总成本约 **$0.01-0.03/局**（用 gemini-2.0-flash-lite）
+- One 30-minute game ≈ 360-600 screenshots
+- Gemini Flash image processing: ~260 tokens/image
+- Total cost approximately **$0.01-0.03/game** (using gemini-2.0-flash-lite)
 
-#### 嘲讽升级示例
+#### Roast Upgrade Examples
 
-| 之前（纯数据） | 之后（视觉+数据） |
+| Before (Data Only) | After (Vision + Data) |
 |---|---|
-| "又死了，第3次了" | "你刚才那个 Q 空了吧？然后还往前走，第3次了兄弟" |
-| "补刀太少了" | "你在河道晃了半天什么都没干" |
-| "队友死了" | "队友在上路打团你在下面刷野呢？" |
+| "Dead again, that's the 3rd time" | "You missed that Q, then walked forward anyway — that's death #3, buddy" |
+| "CS too low" | "You've been wandering around the river doing nothing" |
+| "Teammate died" | "Your team is fighting top lane and you're farming jungle?" |
 
-**工作量**：~4-5 小时
-**前提**：需要 Gemini API Key
+**Effort**: ~4-5 hours
+**Prerequisite**: Requires Gemini API Key
 
 ---
 
-## 四、暂不实现的功能
+## 4. Features Not Planned for Now
 
-| 功能 | 原因 |
+| Feature | Reason |
 |---|---|
-| TTS 情绪/停顿控制 | 当前中文 TTS 引擎不支持细粒度控制 |
-| 音量混音 | 需要 ffmpeg 处理，增加复杂度 |
-| 音效系统 | 优先级低，体验提升不大 |
+| TTS Emotion/Pause Control | Current Chinese TTS engines don't support fine-grained prosody control |
+| Audio Mixing | Requires ffmpeg processing, adds complexity |
+| Sound Effects System | Low priority, minimal UX improvement |
 
 ---
 
-## 五、实施路线
+## 5. Implementation Roadmap
 
-### Phase 1：核心体验升级（预计 1 天）
+### Phase 1: Core Experience Upgrade (Est. 1 day)
 ```
-1. Memory Store — 让 AI 记住上下文
-2. Policy Engine — 频率控制 + 情绪状态机
-3. 英雄名传入 prompt — 最小改动最大收益
+1. Memory Store — Give the AI context awareness
+2. Policy Engine — Frequency control + mood state machine
+3. Pass champion name in prompt — Minimum effort, maximum impact
 ```
-**完成后效果**：嘲讽有上下文（"第 4 次死了"）、有递进（越死越毒）、有英雄梗。
+**After completion**: Roasts have context ("that's your 4th death"), escalation (more toxic as you die more), and champion memes.
 
-### Phase 2：丰富内容（预计 1 天）
+### Phase 2: Content Enrichment (Est. 1 day)
 ```
-4. Rhythm Roast — 不再只盯事件
-5. Template Layer — 稳定输出质量
-6. 人格系统 — 多种风格
+4. Rhythm Roast — No longer event-only
+5. Template Layer — Stabilize output quality
+6. Personality System — Multiple styles
 ```
-**完成后效果**：整局都有评论、质量稳定、可选人设。
+**After completion**: Commentary throughout the whole game, stable quality, selectable personas.
 
-### Phase 3：锦上添花（预计 0.5 天）
+### Phase 3: Polish (Est. 0.5 day)
 ```
-7. 对局总结
-8. 成就系统（连死 5 次触发特殊播报）
+7. Post-Game Summary
+8. Achievement System (e.g., 5 death streak triggers special announcement)
 ```
 
-### Phase 4：视觉感知（预计 1 天）
+### Phase 4: Visual Perception (Est. 1 day)
 ```
-9. Vision Layer — 屏幕截图 + Gemini Live API
-10. 视觉触发嘲讽（空技能/走位/摸鱼检测）
+9. Vision Layer — Screen capture + Gemini Live API
+10. Vision-triggered roasts (missed abilities/positioning/idle detection)
 ```
-**完成后效果**：AI 真正"看到"你在玩什么，嘲讽达到解说级别。
+**After completion**: The AI truly "sees" your gameplay — roasts reach caster-level commentary.
 
 ---
 
-## 六、文件改动预估
+## 6. Estimated File Changes
 
-| 文件 | 改动 |
+| File | Change |
 |---|---|
-| `src/coach/memory.js` | 新建 — Memory Store |
-| `src/coach/policy.js` | 新建 — Policy Engine |
-| `src/coach/templates.js` | 新建 — Template Layer |
-| `src/coach/rhythm.js` | 新建 — Rhythm Roast 检测 |
-| `src/coach/gamestate.js` | 增加闪现检测、装备变化检测 |
-| `src/coach/index.js` | 集成新模块，改造 tick 循环 |
-| `src/coach/llm.js` | 改造 prompt 结构，接收 Memory 上下文 |
-| `src/config.js` | 新增人格设置、视觉层开关 |
-| `public/index.html` | Settings 加人格选择下拉、视觉层开关 |
-| `src/coach/vision.js` | 新建 — 截屏 + Gemini 视觉分析（Phase 4） |
+| `src/coach/memory.js` | New — Memory Store |
+| `src/coach/policy.js` | New — Policy Engine |
+| `src/coach/templates.js` | New — Template Layer |
+| `src/coach/rhythm.js` | New — Rhythm Roast detection |
+| `src/coach/gamestate.js` | Add Flash detection, item change detection |
+| `src/coach/index.js` | Integrate new modules, refactor tick loop |
+| `src/coach/llm.js` | Refactor prompt structure, accept Memory context |
+| `src/config.js` | Add personality settings, Vision Layer toggle |
+| `public/index.html` | Add personality dropdown, Vision Layer toggle in Settings |
+| `src/coach/vision.js` | New — Screen capture + Gemini visual analysis (Phase 4) |

@@ -3,6 +3,7 @@
   "version": "0.4.0",
   "description": "AI Toxic Coach for League of Legends - real-time roasts with TTS powered by LLM",
   "author": "ebwood",
+  "license": "MIT",
   "main": "electron/main.js",
   "bin": "index.js",
   "scripts": {
